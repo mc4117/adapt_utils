@@ -2,7 +2,7 @@ from thetis import *
 from thetis.physical_constants import *
 from firedrake.petsc import PETSc
 import math
-import pyadjoint
+# import pyadjoint
 
 from adapt_utils.swe.options import ShallowWaterOptions
 from adapt_utils.solver import SteadyProblem, UnsteadyProblem
@@ -466,9 +466,9 @@ class SteadyShallowWaterProblem(SteadyProblem):
         u_interp, eta_interp = self.interpolated_solution.split()
         u_, eta_ = self.prev_solution.split()
         PETSc.Sys.Print("Interpolating solution across meshes...")
-        with pyadjoint.stop_annotating():
-            u_interp.project(u_)
-            eta_interp.project(eta_)
+        # with pyadjoint.stop_annotating():
+        u_interp.project(u_)
+        eta_interp.project(eta_)
 
 
 class UnsteadyShallowWaterProblem(UnsteadyProblem):
