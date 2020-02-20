@@ -1,33 +1,10 @@
 # Directories
-*.pdf
-*log
-*.pyc
-*.gz
-*.pvd
-*.vtu
-*.hdf5
-*.pyc
-__pycache__/*
-case_studies/*
-desalination/*
-tracer/*
-tsunami/*
-turbine/*
-test_cases/box_discharge2d/*
-test_cases/bubble_shear/*
-test_cases/point_discharge2d/*
-test_cases/point_discharge3d/*
-test_cases/rossby_wave/*
-test_cases/slotted_cylinder/*
-test_cases/steady_turbine/*
-test_cases/unsteady_turbine/*
-test_cases/tsunami/*
-swe/tsunami/*
-swe/turbine/*
+__pycache__/
 
 # Specific files
 FIXME
 adjoint.py
+.DS_Store
 
 # File types
 *.swp
@@ -36,3 +13,4 @@ adjoint.py
 *.vtu
 *.txt
 *.ipynb_checkpoints
+*.hdf5

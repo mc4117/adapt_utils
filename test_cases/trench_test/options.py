@@ -2,7 +2,7 @@ from thetis import *
 from thetis.configuration import *
 
 #from adapt_utils.test_cases.trench_test.hydro_options import TrenchHydroOptions
-from adapt_utils.swe.morphological_options import TracerOptions
+from adapt_utils.swe.morphological_options import MorphOptions
 
 import os
 import numpy as np
@@ -15,7 +15,7 @@ rc('text', usetex=True)
 __all__ = ["TrenchOptions"]
 
 
-class TrenchOptions(TracerOptions):
+class TrenchOptions(MorphOptions):
     """
     Parameters for test case described in [1].
 
@@ -26,7 +26,7 @@ class TrenchOptions(TracerOptions):
     def __init__(self, friction='manning', plot_timeseries=False, nx=1, ny = 1, **kwargs):
         self.plot_timeseries = plot_timeseries
 
-        self.default_mesh = RectangleMesh(16*5*nx, 5*ny, 16, 1.1)
+        self.default_mesh = RectangleMesh(16*5*nx, 5*ny, 16, 1.1)# Mesh("trench.msh")
         self.P1DG = FunctionSpace(self.default_mesh, "DG", 1)  # FIXME
         self.P1 = FunctionSpace(self.default_mesh, "CG", 1)
         self.P1_vec = VectorFunctionSpace(self.default_mesh, "CG", 1)
@@ -125,13 +125,14 @@ class TrenchOptions(TracerOptions):
         self.bath_file = File(os.path.join(self.di, 'bath_export.pvd'))        
         
 
-    def set_source_tracer(self, fs, solver_obj = None, init = False, t_old = Constant(100)):
+    def set_source_tracer(self, fs, solver_obj = None, init = False, t_old = Constant(100), tracer = None):
         if init:
             if t_old.dat.data[:] == 0.0:
                 self.source = Function(fs).project(-(self.settling_velocity*self.coeff*self.tracer_init_value/self.depth)+ (self.settling_velocity*self.ceq/self.depth))
             else:
-                self.source = Function(fs).project(-(self.settling_velocity*self.coeff*self.tracer_interp/self.depth)+ (self.settling_velocity*self.ceq/self.depth))
+                self.source = Function(fs).project(-(self.settling_velocity*self.coeff*tracer/self.depth)+ (self.settling_velocity*self.ceq/self.depth))
         else:
+
             self.source.interpolate(-(self.settling_velocity*self.coeff*solver_obj.fields.tracer_2d/self.depth)+(self.settling_velocity*self.ceq/self.depth))
         return self.source
 
@@ -279,3 +280,7 @@ class TrenchOptions(TracerOptions):
         def export_func():
             self.bath_file.write(self.bath_export)
         return export_func
+    
+    def set_boundary_surface(self):
+        """Set the initial displacement of the boundary elevation."""
+        pass

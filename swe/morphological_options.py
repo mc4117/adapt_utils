@@ -3,17 +3,17 @@ from thetis.configuration import *
 
 from adapt_utils.swe.tsunami.options import TsunamiOptions
 
-__all__ = ["TracerOptions"]
+__all__ = ["MorphOptions"]
 
-class TracerOptions(TsunamiOptions):
+class MorphOptions(TsunamiOptions):
     """
     Parameter class for general morphological problems.
     """
     
     def __init__(self, **kwargs):
-        super(TracerOptions, self).__init__(**kwargs)    
+        super(MorphOptions, self).__init__(**kwargs)    
     
-    def set_up_suspended(self, mesh): 
+    def set_up_suspended(self, mesh, tracer = None): 
         
 
         
@@ -89,7 +89,7 @@ class TracerOptions(TsunamiOptions):
         
         
         self.tracer_init_value = Constant(self.ceq.at([0,0])/self.coeff.at([0,0]))
-        self.source = Function(self.P1DG).project(self.set_source_tracer(self.P1DG, solver_obj = None, init = True, t_old = self.t_old)) 
+        self.source = Function(self.P1DG).project(self.set_source_tracer(self.P1DG, solver_obj = None, init = True, t_old = self.t_old, tracer = tracer)) 
         self.qbsourcedepth = Function(self.P1).project(self.source * self.depth)
         
         if self.convective_vel_flag:

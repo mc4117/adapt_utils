@@ -15,7 +15,7 @@ class SteadyShallowWaterProblem(SteadyProblem):
     """
     General solver object for stationary shallow water problems.
     """
-    def __init__(self, op, mesh=None, discrete_adjoint=True, prev_solution=None, levels=1):
+    def __init__(self, op, mesh=None, **kwargs):
         p = op.degree
         if op.family == 'dg-dg' and p >= 0:
             fe = VectorElement("DG", triangle, p)*FiniteElement("DG", triangle, p)
@@ -23,7 +23,8 @@ class SteadyShallowWaterProblem(SteadyProblem):
             fe = VectorElement("DG", triangle, p)*FiniteElement("Lagrange", triangle, p+1)
         else:
             raise NotImplementedError
-        super(SteadyShallowWaterProblem, self).__init__(op, mesh, fe, discrete_adjoint, prev_solution, levels)
+        super(SteadyShallowWaterProblem, self).__init__(op, mesh, fe, **kwargs)
+        prev_solution = kwargs.get('prev_solution')
         if prev_solution is not None:
             self.interpolate_solution(prev_solution)
 
@@ -42,6 +43,7 @@ class SteadyShallowWaterProblem(SteadyProblem):
         self.fields = {}
         self.fields['viscosity'] = self.op.set_viscosity(self.P1)
         self.fields['diffusivity'] = self.op.set_diffusivity(self.P1)
+        self.fields['bathymetry'] = self.op.set_bathymetry(self.P1DG)
         self.fields['inflow'] = self.op.set_inflow(self.P1_vec)
         self.fields['coriolis'] = self.op.set_coriolis(self.P1)
         self.fields['quadratic_drag_coefficient'] = self.op.set_quadratic_drag_coefficient(self.P1)
@@ -99,25 +101,25 @@ class SteadyShallowWaterProblem(SteadyProblem):
         options.use_wetting_and_drying = op.wetting_and_drying
         options.wetting_and_drying_alpha = op.wetting_and_drying_alpha
         options.solve_tracer = op.solve_tracer
-        #if op.solve_tracer:
-            #raise NotImplementedError  # TODO
+        if op.solve_tracer:
+            raise NotImplementedError  # TODO
 
         # Boundary conditions
         self.solver_obj.bnd_functions['shallow_water'] = self.boundary_conditions
 
+        # NOTE: Extra setup must be done *before* setting initial condition
+        if hasattr(self, 'extra_setup'):
+            self.extra_setup()
+
         # Initial conditions  # TODO: will this work over mesh iterations?
         if self.prev_solution is not None:
-            interp = self.interpolate_solution
-            u_interp, eta_interp = self.interpolate_solution.split()
+            u_interp, eta_interp = self.solution.split()
         else:
             interp = Function(self.V)
             u_interp, eta_interp = interp.split()
             u_interp.interpolate(self.fields['inflow'])
             eta_interp.assign(0.0)
         self.solver_obj.assign_initial_conditions(uv=u_interp, elev=eta_interp)
-
-        if hasattr(self, 'extra_setup'):
-            self.extra_setup()
 
         self.lhs = self.solver_obj.timestepper.F
         self.solution = self.solver_obj.fields.solution_2d
@@ -424,7 +426,7 @@ class UnsteadyShallowWaterProblem(UnsteadyProblem):
     """
     General solver object for time-dependent shallow water problems.
     """
-    def __init__(self, op, mesh=None, discrete_adjoint=True, prev_solution=None, levels=1, load_index=0):
+    def __init__(self, op, mesh=None, **kwargs):
         p = op.degree
         if op.family == 'dg-dg' and p >= 0:
             fe = VectorElement("DG", triangle, p)*FiniteElement("DG", triangle, p)
@@ -432,8 +434,8 @@ class UnsteadyShallowWaterProblem(UnsteadyProblem):
             fe = VectorElement("DG", triangle, p)*FiniteElement("Lagrange", triangle, p+1)
         else:
             raise NotImplementedError
-        self.load_index = load_index
-        super(UnsteadyShallowWaterProblem, self).__init__(op, mesh, fe, discrete_adjoint, prev_solution, levels)
+        super(UnsteadyShallowWaterProblem, self).__init__(op, mesh, fe, **kwargs)
+        prev_solution = kwargs.get('prev_solution')
         if prev_solution is not None:
             self.interpolate_solution(prev_solution)
 
@@ -452,12 +454,15 @@ class UnsteadyShallowWaterProblem(UnsteadyProblem):
         self.fields = {}
         self.fields['viscosity'] = self.op.set_viscosity(self.P1)
         self.fields['diffusivity'] = self.op.set_diffusivity(self.P1)
+        if self.op.solve_tracer == False:
+            self.fields['bathmetry'] = self.op.set_bathymetry(self.P1DG)
         self.fields['inflow'] = self.op.set_inflow(self.P1_vec)
         self.fields['coriolis'] = self.op.set_coriolis(self.P1)
         self.fields['quadratic_drag_coefficient'] = self.op.set_quadratic_drag_coefficient(self.P1)
         self.fields['manning_drag_coefficient'] = self.op.set_manning_drag_coefficient(self.P1)
-        #self.op.set_boundary_surface()
         self.fields['source'] = self.op.source
+        
+        self.op.set_boundary_surface()
 
 
     def set_stabilisation(self):
@@ -476,49 +481,51 @@ class UnsteadyShallowWaterProblem(UnsteadyProblem):
         self.solver_obj.iterate(update_forcings=self.op.get_update_forcings(self.solver_obj),
                                 export_func=self.op.get_export_func(self.solver_obj))
         self.solution = self.solver_obj.fields.solution_2d
+        
+        old_mesh = Mesh(Function(self.mesh.coordinates))                
+        P1DG = FunctionSpace(old_mesh, "DG", 1)
+        P1 = FunctionSpace(old_mesh, "CG", 1)    
+        
+        solution_bathymetry = self.solver_obj.fields.bathymetry_2d.copy(deepcopy = True)
+        self.solution_old_bathymetry = Function(P1).project(solution_bathymetry)
+        
         if self.op.solve_tracer:
             solution_tracer = self.solver_obj.fields.tracer_2d.copy(deepcopy = True)
-            solution_bathymetry = self.solver_obj.fields.bathymetry_2d.copy(deepcopy = True)
+            self.solution_old_tracer = Function(P1DG).project(solution_tracer)
             
-            old_mesh = Mesh(Function(self.mesh.coordinates))                
-            P1DG = FunctionSpace(old_mesh, "DG", 1)
-            P1 = FunctionSpace(old_mesh, "CG", 1)
-            
-            self.op.solution_old_tracer = Function(P1DG).project(solution_tracer)
-            self.op.solution_old_bathymetry = Function(P1).project(solution_bathymetry)
             
     def setup_solver(self):
         if not hasattr(self, 'remesh_step'):
             self.remesh_step = 0
         op = self.op
         
-        if hasattr(self.op, "solution_old_bathymetry"):
-            self.op.bathymetry = Function(self.P1).project(self.op.solution_old_bathymetry)
+        if hasattr(self, "solution_old_bathymetry"):
+            op.bathymetry = Function(self.P1).project(self.solution_old_bathymetry)
         else:
-            self.op.bathymetry = self.op.set_bathymetry(self.P1)
+            op.bathymetry = self.op.set_bathymetry(self.P1)
         
-        self.solver_obj = solver2d.FlowSolver2d(self.mesh, self.op.bathymetry)
-
+        if self.op.solve_tracer:
+            self.solver_obj = solver2d.FlowSolver2d(self.mesh, op.bathymetry)
+        else:
+            self.solver_obj = solver2d.FlowSolver2d(self.mesh, self.fields['bathymetry'])
+        
         self.solver_obj.export_initial_state = self.remesh_step == 0
-            
 
         # Initial conditions
         if self.load_index > 0:
             self.solver_obj.load_state(self.load_index)
             raise NotImplementedError
-        elif self.prev_solution is not None:
-            u_interp, eta_interp = self.interpolate_solution.split()
         else:
             u_interp, eta_interp = self.solution.split()
-            if op.solve_tracer:
-                if hasattr(self.op, 'solution_old_tracer'):
-                    self.op.tracer_interp = Function(self.P1DG).project(self.op.solution_old_tracer)         
-                else:
-                    self.op.tracer_interp = Function(self.P1DG).project(self.op.tracer_init)
+        if op.solve_tracer:
+            if hasattr(self, 'solution_old_tracer'):
+                self.tracer_interp = Function(self.P1DG).project(self.solution_old_tracer)         
+            else:
+                self.tracer_interp = Function(self.P1DG).project(self.op.tracer_init)
         
         if op.solve_tracer:
             self.uv_d, self.eta_d = self.solution.split()
-            op.set_up_suspended(self.mesh)
+            op.set_up_suspended(self.mesh, tracer = self.tracer_interp)
                
         options = self.solver_obj.options
         
@@ -572,15 +579,13 @@ class UnsteadyShallowWaterProblem(UnsteadyProblem):
         if op.solve_tracer:
             self.solver_obj.bnd_functions['tracer'] = op.set_boundary_conditions_tracer(self.V)
 
-
             
         if op.solve_tracer:
             
             if self.op.tracer_init is not None:
-                self.solver_obj.assign_initial_conditions(uv = u_interp, elev = eta_interp, tracer = self.op.tracer_interp)
+                self.solver_obj.assign_initial_conditions(uv = u_interp, elev = eta_interp, tracer = self.tracer_interp)
         else:
             self.solver_obj.assign_initial_conditions(uv=u_interp, elev=eta_interp)        
-
 
         if hasattr(self, 'extra_setup'):
             self.extra_setup()
