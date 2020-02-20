@@ -6,6 +6,8 @@ import numpy as np
 
 from adapt_utils.test_cases.trench_test.options import TrenchOptions
 from adapt_utils.swe.tsunami.solver import TsunamiProblem
+from adapt_utils.adapt import recovery
+from adapt_utils.norms import local_frobenius_norm
 
 op = TrenchOptions(approach='monge_ampere',
                     plot_timeseries=False,
@@ -36,19 +38,24 @@ def gradient_interface_monitor(mesh, alpha = 2000.0, beta = 10.0):
 
     eta = tp.solution.split()[1]
     b = tp.solver_obj.fields.bathymetry_2d
+    bath_gradient = recovery.construct_gradient(b)
+    bath_hess = recovery.construct_hessian(b)
+    frob_bath_hess = Function(P1).project(local_frobenius_norm(bath_hess))
+    
     current_mesh = eta.function_space().mesh()
     P1_current = FunctionSpace(current_mesh, "CG", 1)
-    bath_dx_sq = interpolate(pow(b.dx(0), 2), P1_current)
-    bath_dy_sq = interpolate(pow(b.dx(1), 2), P1_current)
-    bath_dx_dx_sq = interpolate(pow(bath_dx_sq.dx(0), 2), P1_current)
-    bath_dy_dy_sq = interpolate(pow(bath_dy_sq.dx(1), 2), P1_current)
-    #norm = interpolate(conditional(bath_dx_dx_sq + bath_dy_dy_sq > 10**(-7), bath_dx_dx_sq + bath_dy_dy_sq, Constant(10**(-7))), P1_current)
-    norm_two = interpolate(bath_dx_dx_sq + bath_dy_dy_sq, P1_current)
+    bath_dx_sq = interpolate(pow(bath_gradient[0], 2), P1_current)
+    bath_dy_sq = interpolate(pow(bath_gradient[1], 2), P1_current)
+    #bath_dx_dx_sq = interpolate(pow(bath_dx_sq.dx(0), 2), P1_current)
+    #bath_dy_dy_sq = interpolate(pow(bath_dy_sq.dx(1), 2), P1_current)
+    ##norm = interpolate(conditional(bath_dx_dx_sq + bath_dy_dy_sq > 10**(-7), bath_dx_dx_sq + bath_dy_dy_sq, Constant(10**(-7))), P1_current)
+    #norm_two = interpolate(bath_dx_dx_sq + bath_dy_dy_sq, P1_current)
     norm_one = interpolate(bath_dx_sq + bath_dy_sq, P1_current)
-    #norm_tmp = interpolate(bath_dx_sq/norm, P1_current)
+    ##norm_tmp = interpolate(bath_dx_sq/norm, P1_current)
     norm_one_proj = project(norm_one, P1)
-    norm_two_proj = project(norm_two, P1)
+    #norm_two_proj = project(norm_two, P1)
 
+    import ipdb; ipdb.set_trace()
 
     return sqrt(1.0 + (alpha*norm_two_proj) + (beta*norm_one_proj))
 
