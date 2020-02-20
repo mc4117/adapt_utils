@@ -92,6 +92,8 @@ solver_obj, update_forcings_tracer, diff_bathy, diff_bathy_file = morph.morpholo
 # run model
 solver_obj.iterate(update_forcings = update_forcings_tracer)
 
+stop
+
 # bathymetry
 
 xaxisthetis1 = []
