@@ -18,7 +18,7 @@ op = TrenchOptions(approach='monge_ampere',
                     num_adapt=1,
                     qoi_mode='inundation_volume',
                     friction = 'nikuradse',
-                    nx=0.75,
+                    nx=0.5,
                     ny = 1,
                     r_adapt_rtol=1.0e-3)
 
@@ -26,13 +26,12 @@ tp = TsunamiProblem(op, levels=0)
 tp.setup_solver()
 
 
-def gradient_interface_monitor(mesh, alpha = 2000.0, beta = 10.0):
+def gradient_interface_monitor(mesh, alpha = 400.0, gamma = 0.0):
     """
     Monitor function focused around the steep_gradient (budd acta numerica)
 
     NOTE: Defined on the *computational* mesh.
 
-    :kwarg alpha: controls the size of the dense region surrounding the coast.
     """
     P1 = FunctionSpace(mesh, "CG", 1)
 
@@ -40,7 +39,7 @@ def gradient_interface_monitor(mesh, alpha = 2000.0, beta = 10.0):
     b = tp.solver_obj.fields.bathymetry_2d
     bath_gradient = recovery.construct_gradient(b)
     bath_hess = recovery.construct_hessian(b)
-    frob_bath_hess = Function(P1).project(local_frobenius_norm(bath_hess))
+    frob_bath_hess = Function(b.function_space()).project(local_frobenius_norm(bath_hess))
     
     current_mesh = eta.function_space().mesh()
     P1_current = FunctionSpace(current_mesh, "CG", 1)
@@ -53,11 +52,21 @@ def gradient_interface_monitor(mesh, alpha = 2000.0, beta = 10.0):
     norm_one = interpolate(bath_dx_sq + bath_dy_sq, P1_current)
     ##norm_tmp = interpolate(bath_dx_sq/norm, P1_current)
     norm_one_proj = project(norm_one, P1)
-    #norm_two_proj = project(norm_two, P1)
+    norm_two_proj = project(frob_bath_hess, P1)
 
-    import ipdb; ipdb.set_trace()
+    H = Function(P1)
+    τ = TestFunction(P1)
+    n = FacetNormal(mesh)
 
-    return sqrt(1.0 + (alpha*norm_two_proj) + (beta*norm_one_proj))
+    mon_init = project(sqrt(1.0 + alpha * norm_two_proj), P1)
+    
+    K = 10*(0.4**2)/4
+    a = (inner(τ,H)*dx)+(K*inner(grad(τ), grad(H))*dx) - (K*(τ*inner(grad(H), n)))*ds
+    a -= inner(τ,mon_init)*dx
+    solve(a == 0, H)
+    
+    return H
+    #return sqrt(1.0 + alpha*norm_two_proj + gamma*norm_one_proj)
 
 tp.monitor_function = gradient_interface_monitor
 tp.solve(uses_adjoint=False)
