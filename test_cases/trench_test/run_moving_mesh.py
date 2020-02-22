@@ -3,9 +3,14 @@ from thetis import *
 import pylab as plt
 import pandas as pd
 import numpy as np
+import time
 
 from adapt_utils.test_cases.trench_test.options import TrenchOptions
 from adapt_utils.swe.tsunami.solver import TsunamiProblem
+
+t1 = time.time()
+
+nx = 0.4
 
 op = TrenchOptions(approach='monge_ampere',
                     plot_timeseries=False,
@@ -16,7 +21,7 @@ op = TrenchOptions(approach='monge_ampere',
                     num_adapt=1,
                     qoi_mode='inundation_volume',
                     friction = 'nikuradse',
-                    nx=0.75,
+                    nx=nx,
                     ny = 1,
                     r_adapt_rtol=1.0e-3)
 
@@ -24,7 +29,7 @@ tp = TsunamiProblem(op, levels=0)
 tp.setup_solver()
 
 
-def gradient_interface_monitor(mesh, alpha = 2000.0, beta = 10.0):
+def gradient_interface_monitor(mesh, alpha = 1000.0, beta = 10.0):
     """
     Monitor function focused around the steep_gradient (budd acta numerica)
 
@@ -55,32 +60,11 @@ def gradient_interface_monitor(mesh, alpha = 2000.0, beta = 10.0):
 tp.monitor_function = gradient_interface_monitor
 tp.solve(uses_adjoint=False)
 
-xaxisthetis1 = []
-bathymetrythetis1 = []
+t2 = time.time()
 
-for i in np.linspace(0,15.8, 40):
-    xaxisthetis1.append(i)
-    bathymetrythetis1.append(-tp.solver_obj.fields.bathymetry_2d.at([i, 0.55]))
 
-df = pd.concat([pd.DataFrame(xaxisthetis1, columns = ['x']), pd.DataFrame(bathymetrythetis1, columns = ['bath'])], axis = 1)
 
-df.to_csv('bed_trench_adap.csv')
-
-not_adapted_mesh = pd.read_csv('bed_trench_output.csv')
-plt.plot(not_adapted_mesh['0'], not_adapted_mesh['0.1'], label = 'not adapted mesh')
-
-data = pd.read_excel('../../../Trench/recreatepaperrun1.xlsx', sheet_name = 'recreatepaperrun', header = None)
-diff_15 = pd.read_excel('../../../Trench/extra_diffusion.xlsx')
-
-plt.scatter(data[0], data[1], label = 'Experimental Data')
-
-thetisdf = pd.read_csv('../../../Trench/Sensitivity Analysis/linux_morfacfactor_ten_bed_new_one_diff15.csv')
-plt.plot(thetisdf['0'], thetisdf['0.1'], label = 'Thetis')
-
-plt.plot(diff_15['x'][diff_15['y'] == 0.55], -diff_15['diff 0.15 diff factors'][diff_15['y'] == 0.55], label = 'Sisyphe')
-plt.plot(xaxisthetis1, bathymetrythetis1, '.', linewidth = 2, label = 'adapted mesh')
-plt.legend()
-plt.show()
+data = pd.read_csv('experimental_data.csv', header = None)
 
 datathetis = []
 bathymetrythetis1 = []
@@ -96,5 +80,23 @@ for i in range(4, len(data[0].dropna())):
     bathymetrythetis1.append(-tp.solver_obj.fields.bathymetry_2d.at([np.round(data[0].dropna()[i],3), 0.55]))
     diff_thetis.append((data[1].dropna()[i] - bathymetrythetis1[-1])**2)
     
+    
+df = pd.concat([pd.DataFrame(datathetis, columns = ['x']), pd.DataFrame(bathymetrythetis1, columns = ['bath'])], axis = 1)
+
+df.to_csv('bed_trench_output' + str(nx) + '.csv')
+
+plt.plot(datathetis, bathymetrythetis1, '.', linewidth = 2, label = 'adapted mesh')
+plt.legend()
+plt.show()
+    
 print("L2 norm: ")
-print(np.sqrt(sum(diff_thetis)))    
+print(np.sqrt(sum(diff_thetis)))  
+
+print("total time: ")  
+print(t2 -t1)
+
+f = open("output_" + str(nx) +'_' + str(1000)+ '.txt', "w+")
+f.write(str(np.sqrt(sum(diff_thetis))))
+f.write("/n")
+f.write(str(t2-t1))
+f.close()
