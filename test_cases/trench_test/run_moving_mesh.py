@@ -7,6 +7,8 @@ import time
 
 from adapt_utils.test_cases.trench_test.options import TrenchOptions
 from adapt_utils.swe.tsunami.solver import TsunamiProblem
+from adapt_utils.adapt import recovery
+from adapt_utils.norms import local_frobenius_norm
 
 t1 = time.time()
 
@@ -21,7 +23,11 @@ op = TrenchOptions(approach='monge_ampere',
                     num_adapt=1,
                     qoi_mode='inundation_volume',
                     friction = 'nikuradse',
+<<<<<<< HEAD
                     nx=nx,
+=======
+                    nx=0.5,
+>>>>>>> 6ea6fef5bee12378bf736fa1b0932305637fe389
                     ny = 1,
                     r_adapt_rtol=1.0e-3)
 
@@ -29,33 +35,48 @@ tp = TsunamiProblem(op, levels=0)
 tp.setup_solver()
 
 
-def gradient_interface_monitor(mesh, alpha = 1000.0, beta = 10.0):
+def gradient_interface_monitor(mesh, alpha = 400.0, gamma = 0.0):
+
     """
     Monitor function focused around the steep_gradient (budd acta numerica)
 
     NOTE: Defined on the *computational* mesh.
 
-    :kwarg alpha: controls the size of the dense region surrounding the coast.
     """
     P1 = FunctionSpace(mesh, "CG", 1)
 
     eta = tp.solution.split()[1]
     b = tp.solver_obj.fields.bathymetry_2d
+    bath_gradient = recovery.construct_gradient(b)
+    bath_hess = recovery.construct_hessian(b)
+    frob_bath_hess = Function(b.function_space()).project(local_frobenius_norm(bath_hess))
+    
     current_mesh = eta.function_space().mesh()
     P1_current = FunctionSpace(current_mesh, "CG", 1)
-    bath_dx_sq = interpolate(pow(b.dx(0), 2), P1_current)
-    bath_dy_sq = interpolate(pow(b.dx(1), 2), P1_current)
-    bath_dx_dx_sq = interpolate(pow(bath_dx_sq.dx(0), 2), P1_current)
-    bath_dy_dy_sq = interpolate(pow(bath_dy_sq.dx(1), 2), P1_current)
-    #norm = interpolate(conditional(bath_dx_dx_sq + bath_dy_dy_sq > 10**(-7), bath_dx_dx_sq + bath_dy_dy_sq, Constant(10**(-7))), P1_current)
-    norm_two = interpolate(bath_dx_dx_sq + bath_dy_dy_sq, P1_current)
+    bath_dx_sq = interpolate(pow(bath_gradient[0], 2), P1_current)
+    bath_dy_sq = interpolate(pow(bath_gradient[1], 2), P1_current)
+    #bath_dx_dx_sq = interpolate(pow(bath_dx_sq.dx(0), 2), P1_current)
+    #bath_dy_dy_sq = interpolate(pow(bath_dy_sq.dx(1), 2), P1_current)
+    ##norm = interpolate(conditional(bath_dx_dx_sq + bath_dy_dy_sq > 10**(-7), bath_dx_dx_sq + bath_dy_dy_sq, Constant(10**(-7))), P1_current)
+    #norm_two = interpolate(bath_dx_dx_sq + bath_dy_dy_sq, P1_current)
     norm_one = interpolate(bath_dx_sq + bath_dy_sq, P1_current)
-    #norm_tmp = interpolate(bath_dx_sq/norm, P1_current)
+    ##norm_tmp = interpolate(bath_dx_sq/norm, P1_current)
     norm_one_proj = project(norm_one, P1)
-    norm_two_proj = project(norm_two, P1)
+    norm_two_proj = project(frob_bath_hess, P1)
 
+    H = Function(P1)
+    τ = TestFunction(P1)
+    n = FacetNormal(mesh)
 
-    return sqrt(1.0 + (alpha*norm_two_proj) + (beta*norm_one_proj))
+    mon_init = project(sqrt(1.0 + alpha * norm_two_proj), P1)
+    
+    K = 10*(0.4**2)/4
+    a = (inner(τ,H)*dx)+(K*inner(grad(τ), grad(H))*dx) - (K*(τ*inner(grad(H), n)))*ds
+    a -= inner(τ,mon_init)*dx
+    solve(a == 0, H)
+    
+    return H
+    #return sqrt(1.0 + alpha*norm_two_proj + gamma*norm_one_proj)
 
 tp.monitor_function = gradient_interface_monitor
 tp.solve(uses_adjoint=False)
@@ -95,7 +116,7 @@ print(np.sqrt(sum(diff_thetis)))
 print("total time: ")  
 print(t2 -t1)
 
-f = open("output_" + str(nx) +'_' + str(1000)+ '.txt', "w+")
+f = open("output_" + str(nx) +'_' + str(400)+ '.txt', "w+")
 f.write(str(np.sqrt(sum(diff_thetis))))
 f.write("/n")
 f.write(str(t2-t1))
