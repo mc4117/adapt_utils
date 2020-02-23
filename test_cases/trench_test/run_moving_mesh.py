@@ -12,7 +12,7 @@ from adapt_utils.norms import local_frobenius_norm
 
 t1 = time.time()
 
-nx = 0.4
+nx = 0.5
 
 op = TrenchOptions(approach='monge_ampere',
                     plot_timeseries=False,
@@ -23,11 +23,7 @@ op = TrenchOptions(approach='monge_ampere',
                     num_adapt=1,
                     qoi_mode='inundation_volume',
                     friction = 'nikuradse',
-<<<<<<< HEAD
                     nx=nx,
-=======
-                    nx=0.5,
->>>>>>> 6ea6fef5bee12378bf736fa1b0932305637fe389
                     ny = 1,
                     r_adapt_rtol=1.0e-3)
 
@@ -83,24 +79,20 @@ tp.solve(uses_adjoint=False)
 
 t2 = time.time()
 
+new_mesh = RectangleMesh(16*5*5, 5*1, 16, 1.1)
 
+bath= Function(FunctionSpace(new_mesh, "CG", 1)).project(tp.solver_obj.fields.bathymetry_2d)
 
 data = pd.read_csv('experimental_data.csv', header = None)
 
 datathetis = []
 bathymetrythetis1 = []
 diff_thetis = []
-for i in range(len(data[0].dropna()[0:3])):
+for i in range(len(data[0].dropna())):
     print(i)
     datathetis.append(data[0].dropna()[i])
-    bathymetrythetis1.append(-tp.solver_obj.fields.bathymetry_2d.at([np.round(data[0].dropna()[i],3), 0.55]))
-    diff_thetis.append((data[1].dropna()[i] - bathymetrythetis1[-1])**2)
-for i in range(4, len(data[0].dropna())):
-    print(i)
-    datathetis.append(data[0].dropna()[i])
-    bathymetrythetis1.append(-tp.solver_obj.fields.bathymetry_2d.at([np.round(data[0].dropna()[i],3), 0.55]))
-    diff_thetis.append((data[1].dropna()[i] - bathymetrythetis1[-1])**2)
-    
+    bathymetrythetis1.append(-bath.at([np.round(data[0].dropna()[i],3), 0.55]))
+    diff_thetis.append((data[1].dropna()[i] - bathymetrythetis1[-1])**2)    
     
 df = pd.concat([pd.DataFrame(datathetis, columns = ['x']), pd.DataFrame(bathymetrythetis1, columns = ['bath'])], axis = 1)
 
@@ -116,8 +108,8 @@ print(np.sqrt(sum(diff_thetis)))
 print("total time: ")  
 print(t2 -t1)
 
-f = open("output_" + str(nx) +'_' + str(400)+ '.txt', "w+")
+f = open("output_frob_norm" + str(nx) +'_' + str(400)+ '.txt', "w+")
 f.write(str(np.sqrt(sum(diff_thetis))))
-f.write("/n")
+f.write("\n")
 f.write(str(t2-t1))
 f.close()
