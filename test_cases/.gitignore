@@ -1,3 +1,4 @@
+<<<<<<< HEAD
 steady_turbine/*
 unsteady_turbine/*
 box_discharge2d/*
@@ -5,11 +6,52 @@ bubble_shear/*
 linear_sw_ripple/*
 point_discharge2d/*
 point_discharge3d/*
+=======
+steady_turbine/outputs/
+steady_turbine/screenshots/
+steady_turbine/data/
+steady_turbine/__pycache__/
+steady_turbine/stephan.py
+steady_turbine/stephan-noid.py
+steady_turbine/run.py
+steady_turbine/*.geo
+steady_turbine/admos_paper_plots.ipynb
+unsteady_turbine/output/
+unsteady_turbine/outputs/
+unsteady_turbine/screenshots/
+unsteady_turbine/__pycache__/
+unsteady_turbine/nic.py
+unsteady_turbine/*.geo
+box_discharge2d/outputs/
+box_discharge2d/screenshots/
+box_discharge2d/__pycache__/
+point_discharge2d/outputs/
+point_discharge2d/screenshots/
+point_discharge2d/__pycache__/
+point_discharge2d/uniform_convergence_log
+point_discharge3d/outputs/
+point_discharge3d/screenshots/
+point_discharge3d/__pycache__/
+>>>>>>> aec135bbfc6430c02716d189350c96a3145e8816
 inundated_beach/outputs/
 inundated_beach/screenshots/
 inundated_beach/__pycache__/
 inundated_beach/videos/
 inundated_beach/strip.geo
+<<<<<<< HEAD
 rossby_wave/*
 slotted_cylinder/*
 tsunami1d/*
+=======
+rossby_wave/outputs/
+rossby_wave/screenshots/
+rossby_wave/__pycache__/
+slotted_cylinder/outputs/
+slotted_cylinder/screenshots/
+slotted_cylinder/__pycache__/
+tsunami1d/outputs/
+tsunami1d/__pycache__/
+ale_advection/outputs/
+ale_advection/screenshots/
+ale_advection/__pycache__/
+>>>>>>> aec135bbfc6430c02716d189350c96a3145e8816

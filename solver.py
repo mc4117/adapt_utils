@@ -53,6 +53,8 @@ class SteadyProblem():
         self.set_fields()
         self.set_stabilisation()
         op.print_debug(op.indent+"Setting boundary conditions...")
+        self.dbcs = []  # TODO: Populate from op
+        self.dbcs_adjoint = []  # TODO: Populate from op
         self.boundary_conditions = op.set_boundary_conditions(self.V)
 
         # Outputs
@@ -74,6 +76,7 @@ class SteadyProblem():
         # Storage during outer mesh adaptation loop
         self.outer_estimators = []
         self.outer_num_cells = []
+        self.outer_dofs = []
         self.outer_num_vertices = []
         self.outer_qois = []
         op.print_debug(op.indent + "{:s} initialisation complete!\n".format(self.__class__.__name__))
@@ -99,7 +102,7 @@ class SteadyProblem():
         self.op_enriched = self.op.copy()
         self.op_enriched.degree += self.op.degree_increase
         self.op_enriched.indent += '  '
-        self.op.print_debug(self.op.indent+"\nCreating enriched finite element space of degree {:d}...".format(self.op_enriched.degree))
+        self.op.print_debug("\n{:s}Creating enriched finite element space of degree {:d}...".format(self.op.indent, self.op_enriched.degree))
         self.tp_enriched = type(self)(self.op_enriched,
                                       mesh=self.am.mesh,
                                       discrete_adjoint=self.discrete_adjoint,
@@ -511,7 +514,9 @@ class SteadyProblem():
         except ValueError:
             meshfile.write(self.mesh.coordinates)
         for key in self.indicators:
-            File(os.path.join(self.di, key + '.pvd')).write(self.indicators[key])
+            tmp = interpolate(abs(self.indicators[key]), self.P0)
+            tmp.rename(key)
+            File(os.path.join(self.di, key + '.pvd')).write(tmp)
         if hasattr(self, 'indicator'):
             self.indicator_file.write(self.indicator)
 
@@ -727,7 +732,7 @@ class SteadyProblem():
         except AssertionError:
             raise ValueError("Please supply a metric.")
         self.am.pragmatic_adapt(self.M)
-        self.set_mesh(self.am.mesh)
+        self.set_mesh(self.am.mesh, hierarchy=None)  # Hiearchy is reconstructed from scratch
 
         print_output("Done adapting. Number of elements: {:d}".format(self.mesh.num_cells()))
         self.num_cells.append(self.mesh.num_cells())
@@ -804,30 +809,37 @@ class SteadyProblem():
         qoi_old = np.finfo(float).min
         num_cells_old = np.iinfo(int).min
         estimator_old = np.finfo(float).min
-        print_output("Number of mesh elements: %d" % self.mesh.num_cells())
         for i in range(op.num_adapt):
             if outer_iteration is None:
-                print_output("\n  Adaptation loop, iteration %d." % (i+1))
+                print_output("\n  '{:s}' adaptation loop, iteration {:d}.".format(self.approach, i+1))
             else:
-                print_output("\n  Adaptation loop %d, iteration %d." % (outer_iteration, i+1))
+                print_output("\n  '{:s}' adaptation loop {:d}, iteration {:d}.".format(self.approach, outer_iteration, i+1))
             print_output("====================================\n")
             self.solve_forward()
+            # try:
+            #     self.solve_forward()
+            # except ConvergenceError:
+            #     break
             qoi = self.quantity_of_interest()
             self.qois.append(qoi)
-            print_output("Quantity of interest: %.4e" % qoi)
+            print_output("Quantity of interest: {:.4e}".format(qoi))
             if i > 0 and np.abs(qoi - qoi_old) < op.qoi_rtol*qoi_old:
                 print_output("Converged quantity of interest!")
                 break
             self.solve_adjoint()
+            # try:
+            #     self.solve_adjoint()
+            # except ConvergenceError:
+            #     break
             self.indicate_error()
             estimator = self.estimators[self.approach][-1]
-            print_output("Error estimator '%s': %.4e" % (self.approach, estimator))
+            print_output("Error estimator '{:s}': {:.4e}".format(self.approach, estimator))
             if i > 0 and np.abs(estimator - estimator_old) < op.estimator_rtol*estimator_old:
                 print_output("Converged error estimator!")
                 break
             self.adapt_mesh()
             num_cells = self.mesh.num_cells()
-            print_output("Number of mesh elements: %d" % num_cells)
+            print_output("Number of mesh elements: {:d}".format(num_cells))
             if i > 0 and np.abs(num_cells - num_cells_old) < op.element_rtol*num_cells_old:
                 print_output("Converged number of mesh elements!")
                 break
@@ -845,10 +857,11 @@ class SteadyProblem():
             print_output("Target:               {:.2e}".format(op.target))
             print_output("Number of elements:   {:d}".format(num_cells))
             print_output("DOF count:            {:d}".format(dofs))
-            print_output("Quantity of interest: {:.4e}".format(qoi))
+            print_output("Quantity of interest: {:.5e}".format(qoi))
             print_output('\n' + 80*'#')
         self.outer_estimators.append(self.estimators[self.approach][-1])
         self.outer_num_cells.append(self.num_cells[-1])
+        self.outer_dofs.append(dofs)
         self.outer_num_vertices.append(self.num_vertices[-1])
         self.outer_qois.append(self.qois[-1])
 
@@ -859,10 +872,12 @@ class SteadyProblem():
         """
         op = self.op
         initial_target = op.target
+        # initial_mesh = copy_mesh(self.mesh)
         for i in range(op.outer_iterations):
             op.target = initial_target*op.target_base**i
-            op.set_default_mesh()  # TODO: Temporary
-            self.set_mesh(op.default_mesh)
+            op.set_default_mesh()
+            self.set_mesh(op.default_mesh, hierarchy=None)  # TODO: Temporary
+            # self.set_mesh(copy_mesh(initial_mesh), hierarchy=None)  # Hiearchy is reconstructed from scratch
             self.create_function_spaces()
             self.create_solutions()
             self.set_fields()
@@ -935,6 +950,11 @@ class UnsteadyProblem(SteadyProblem):
 
     def set_start_condition(self, adjoint=False):
         self.set_solution(self.op.set_start_condition(self.V, adjoint=adjoint), adjoint)
+        if adjoint:
+            self.adjoint_solution_old.assign(self.adjoint_solution)
+        else:
+            self.solution_old.assign(self.solution)
+        self.plot_solution()
 
     def solve_step(self, adjoint=False):
         """

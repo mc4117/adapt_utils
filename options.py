@@ -52,6 +52,7 @@ class Options(FrozenConfigurable):
     r_adapt_maxit = PositiveInteger(1000, help="Maximum number of iterations in r-adaptation loop.").tag(config=True)
     r_adapt_rtol = PositiveFloat(1.0e-8, help="Relative tolerance for residual in r-adaptation loop.").tag(config=True)
     nonlinear_method = Unicode('quasi_newton', help="Method for solving nonlinear system under r-adaptation.").tag(config=True)
+    prescribed_velocity = Unicode(None, allow_none=True, help="Prescribed velocity to use in ALE adaptation, if any.").tag(config=True)
 
     # Metric
     max_anisotropy = PositiveFloat(1000., help="Maximum tolerated anisotropy.").tag(config=True)
@@ -76,7 +77,7 @@ class Options(FrozenConfigurable):
     estimator_rtol = PositiveFloat(0.005, help="Relative tolerance for convergence in error estimator.").tag(config=True)
     target_base = PositiveFloat(10.0, help="Base for exponential increase/decay of target complexity/error within outer mesh adaptation loop.").tag(config=True)
     outer_iterations = PositiveInteger(1, help="Number of iterations in outer adaptation loop.").tag(config=True)
-    indent = Unicode('').tag(config=True)  # TODO: doc
+    indent = Unicode('', help="Indent used in nested print statements.").tag(config=True)
 
     def __init__(self, **kwargs):
         self.update(kwargs)
