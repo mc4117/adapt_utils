@@ -53,7 +53,8 @@ class MeshMover():
         self.ξ = Function(self.mesh.coordinates)  # Computational coordinates
         self.x = Function(self.mesh.coordinates)  # Physical coordinates
         self.I = Identity(self.dim)
-        self.dt = Constant(op.pseudo_dt)
+        self.dt = Constant(op.dt)
+        self.pseudo_dt = Constant(op.pseudo_dt)
 
         # Create functions and solvers
         self.create_function_spaces()
@@ -88,9 +89,13 @@ class MeshMover():
 
     def create_functions(self):
         if self.method == 'ale':
-            self.x_old = Function(self.mesh.coordinates)
-            self.x_new = Function(self.mesh.coordinates)
-            # self.x_old.assign(self.mesh.coordinates)
+            coord_space = self.mesh.coordinates.function_space()
+            if self.op.periodic:
+                self.x_old = interpolate(self.mesh.coordinates, coord_space)
+                self.x_new = interpolate(self.mesh.coordinates, coord_space)
+            else:
+                self.x_old = Function(self.mesh.coordinates)
+                self.x_new = Function(self.mesh.coordinates)
         elif self.op.nonlinear_method == 'relaxation':
             self.φ_old = Function(self.V)
             self.φ_new = Function(self.V)
@@ -128,25 +133,77 @@ class MeshMover():
 
     def setup_pseudotimestepper(self):
         if self.method == 'ale':
-            x, xi = TrialFunction(self.P1DG_vec), TestFunction(self.P1DG_vec)
-            a = dot(xi, x)*dx
-            L = dot(xi, self.x_old)*dx
-            L += self.dt*dot(self.mesh_velocity, xi)*dx
-            prob = LinearVariationalProblem(a, L, self.x_new)
-            params = {'ksp_type': 'cg', 'pc_type': 'jacobi'}
-            self.V_nullspace = None
+            coord_space = self.mesh.coordinates.function_space()
+            x, xi = TrialFunction(coord_space), TestFunction(coord_space)
+            dtc = Constant(self.dt)
+
+            # # Forward Euler mesh update: X^{new} = X^{old} + dt*V^{old}
+            # a = inner(xi, x)*dx
+            # L = inner(xi, self.x_old)*dx
+            # L += dtc*inner(xi, self.mesh_velocity)*dx
+
+            # Forward Euler mesh advection: X^{new} = X^{old} + dt*V^{old}.grad(X^{old})
+            a = inner(xi, x)*dx
+            L = inner(xi, self.x_old)*dx
+            L += dtc*inner(xi, dot(nabla_grad(self.x_old), self.mesh_velocity))*dx
+
+            # TODO: We should probably impose BCs as a postproc step, as for Monge-Ampere
+            # if coord_space.ufl_element().family() in ("CG", "Lagrange"):
+                # # Enforce no mesh movement normal to boundaries
+                # n = FacetNormal(self.mesh)
+                # a_bc = inner(xi, dot(grad(x), n))*ds
+                # L_bc = inner(xi, Constant(as_vector([0.0, 0.0])))*ds
+                # a_bc = inner(xi, x)*ds
+                # L_bc = inner(xi, self.x_old)*ds
+                # a_bc = inner(dot(xi, n), dot(x, n))*ds
+                # L_bc = inner(dot(xi, n), dot(self.x_old, n))*ds
+                # if self.bc is None:
+                #     self.bc = [EquationBC(a_bc == L_bc, self.x_new, 'on_boundary')]
+
+                # Allow tangential movement, but only up until the end of boundary segments
+                # s = as_vector([n[1], -n[0]])
+                # a_bc = inner(xi, dot(grad(x), s))*ds
+                # L_bc = inner(xi, dot(grad(self.x_old), s))*ds
+                # a_bc = inner(dot(xi, s), dot(x, s))*ds
+                # L_bc = inner(dot(xi, s), dot(self.x_old, s))*ds
+                # if self.bbc is None:
+                #     edges = set(self.mesh.exterior_facets.unique_markers)
+                #     if len(edges) > 1:
+                #         corners = [(i, j) for i in edges for j in edges.difference([i])]
+                #         self.bbc = DirichletBC(coord_space, 0, corners)
+                # self.bc.append(EquationBC(a_bc == L_bc, self.x_new, 'on_boundary', bcs=self.bbc))
+            # else:
+                # import warnings
+                # warnings.warn("#### TODO: ALE boundary condition may not be properly accounted for!")
+
+            prob = LinearVariationalProblem(a, L, self.x_new, bcs=self.bc)
+            kwargs = {
+                'solver_parameters': {
+                    # 'mat_type': 'aij',
+                    # 'ksp_type': 'cg',
+                    'ksp_type': 'gmres',
+                    # 'ksp_type': 'preonly',
+                    # 'pc_type': 'sor',
+                    # 'pc_type': 'lu',
+                    # 'pc_type': 'jacobi',
+                    'pc_type': 'bjacobi',
+                    'sub_pc_type': 'ilu',
+                    # 'pc_factor_mat_solver_type': 'mumps',
+                    # 'ksp_monitor': None,
+                    # 'ksp_converged_reason': None,
+                }
+            }
         elif self.op.nonlinear_method == 'relaxation':
             φ, ψ = TrialFunction(self.V), TestFunction(self.V)
             a = dot(grad(ψ), grad(φ))*dx
             L = dot(grad(ψ), grad(self.φ_old))*dx
-            L += self.dt*ψ*(self.monitor*det(self.I + self.σ_old) - self.θ)*dx
+            L += self.pseudo_dt*ψ*(self.monitor*det(self.I + self.σ_old) - self.θ)*dx
             prob = LinearVariationalProblem(a, L, self.φ_new)
-            params = {'ksp_type': 'cg', 'pc_type': 'gamg'}
+            kwargs = {'solver_parameters': {'ksp_type': 'cg', 'pc_type': 'gamg'},
+                      'nullspace': self.V_nullspace, 'transpose_nullspace': self.V_nullspace}
         else:
             raise NotImplementedError
-        self.pseudotimestepper = LinearVariationalSolver(prob, nullspace=self.V_nullspace,
-                                                         transpose_nullspace=self.V_nullspace,
-                                                         solver_parameters=params)
+        self.pseudotimestepper = LinearVariationalSolver(prob, **kwargs)
 
     def setup_residuals(self):
         ψ = TestFunction(self.V)
@@ -335,23 +392,22 @@ class MeshMover():
         n = FacetNormal(self.mesh)
         a_bc = dot(u_cts, n)*dot(v_cts, n)*ds
         L_bc = Constant(0.0)*dot(v_cts, n)*ds
-        bc = self.bc
-        if bc is None:
-            bc = [EquationBC(a_bc == L_bc, self.grad_φ_cts, 'on_boundary')]
+        if self.bc is None:
+            self.bc = [EquationBC(a_bc == L_bc, self.grad_φ_cts, 'on_boundary')]
 
         # Allow tangential movement, but only up until the end of boundary segments
         s = as_vector([n[1], -n[0]])
         a_bc = dot(u_cts, s)*dot(v_cts, s)*ds
         L_bc = dot(grad(self.φ_old), s)*dot(v_cts, s)*ds
-        bbc = self.bbc
-        if bbc is None:
+        if self.bbc is None:
             edges = set(self.mesh.exterior_facets.unique_markers)
-            corners = [(i, j) for i in edges for j in edges.difference([i])]
-            bbc = DirichletBC(self.P1_vec, 0, corners)
-        bc.append(EquationBC(a_bc == L_bc, self.grad_φ_cts, 'on_boundary', bcs=bbc))
+            if len(edges) > 1:
+                corners = [(i, j) for i in edges for j in edges.difference([i])]
+                self.bbc = DirichletBC(self.P1_vec, 0, corners)
+        self.bc.append(EquationBC(a_bc == L_bc, self.grad_φ_cts, 'on_boundary', bcs=self.bbc))
 
         # Create solver
-        prob = LinearVariationalProblem(a, L, self.grad_φ_cts, bcs=bc)
+        prob = LinearVariationalProblem(a, L, self.grad_φ_cts, bcs=self.bc)
         self.l2_projector = LinearVariationalSolver(prob, solver_parameters={'ksp_type': 'cg'})
 
     def adapt(self):
@@ -365,9 +421,9 @@ class MeshMover():
 
     def adapt_ale(self):
         assert self.method == 'ale'
-        self.mesh.coordinates.assign(self.x)
+        # self.mesh.coordinates.assign(self.x)
         self.update()
-        self.mesh.coordinates.assign(self.ξ)
+        # self.mesh.coordinates.assign(self.ξ)
         self.pseudotimestepper.solve()
         self.x_old.assign(self.x_new)
 

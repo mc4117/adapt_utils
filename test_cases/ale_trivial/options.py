@@ -7,30 +7,39 @@ __all__ = ["ALEAdvectionOptions"]
 
 
 class ALEAdvectionOptions(TracerOptions):
-    def __init__(self, n=40, prescribed_velocity='fluid', approach='ale', *args, **kwargs):
-        self.prescribed_velocity = prescribed_velocity
+    def __init__(self, n=40, approach='ale', *args, **kwargs):
         super(ALEAdvectionOptions, self).__init__(*args, approach=approach, **kwargs)
-        self.family = 'CG'
-        self.stabilisation = 'SUPG'
+        if self.family in ('CG', 'cg', 'Lagrange'):
+            self.stabilisation = 'SUPG'
+        elif self.family in ('DG', 'dg', 'Discontinuous Lagrange'):
+            self.stabilisation = 'no'
+        else:
+            raise NotImplementedError
+        self.num_adapt = 1
+        self.nonlinear_method = 'relaxation'
 
         lx, ly = 10, 10
         self.default_mesh = PeriodicRectangleMesh(n, n, lx, ly, direction='x')
+        self.periodic = True
         self.dt = 0.2
+        self.dt_per_export = 1
+        self.dt_per_remesh = 1
         self.end_time = 10.0
 
-        self.base_diffusivity = 1.0e-8
+        # self.base_diffusivity = 1.0e-8
+        self.base_diffusivity = 0.0
         self.base_velocity = [1.0, 0.0]
 
         self.params = {
             "ksp_type": "gmres",
             "pc_type": "sor",
-            "ksp_monitor": None,
-            "ksp_converged_reason": None,
+            # "ksp_monitor": None,
+            # "ksp_converged_reason": None,
         }
 
     def set_velocity(self, fs):
-        self.velocity = Constant(as_vector(self.base_velocity))
-        return self.velocity
+        self.fluid_velocity = interpolate(as_vector(self.base_velocity), fs)
+        return self.fluid_velocity
 
     def set_diffusivity(self, fs):
         self.diffusivity = Constant(self.base_diffusivity)
@@ -45,17 +54,7 @@ class ALEAdvectionOptions(TracerOptions):
         return self.boundary_conditions
 
     def set_initial_condition(self, fs):
-        self.initial_value = Function(fs)
         x, y = SpatialCoordinate(fs.mesh())
         x0, y0 = 5.0, 5.0
-        self.initial_value.interpolate(exp(-((x-x0)**2 + (y-y0)**2)))
+        self.initial_value = interpolate(exp(-((x-x0)**2 + (y-y0)**2)), fs)
         return self.initial_value
-
-    def get_mesh_velocity(self):
-        if self.prescribed_velocity == "constant":
-            self.mesh_velocity = lambda mesh: Constant(as_vector([0.0, 0.0]))  # Fixed mesh
-        elif self.prescribed_velocity == "fluid":
-            self.mesh_velocity = lambda mesh: self.velocity  # Prescribed velocity: that of the fluid
-        else:
-            raise NotImplementedError
-        return self.mesh_velocity

@@ -31,11 +31,6 @@ class SteadyShallowWaterProblem(SteadyProblem):
         # Physical parameters
         physical_constants['g_grav'].assign(op.g)
 
-        # Parameters for adjoint computation
-        z, zeta = self.adjoint_solution.split()
-        z.rename("Adjoint fluid velocity")
-        zeta.rename("Adjoint elevation")
-
         # Classification
         self.nonlinear = True
 
@@ -49,6 +44,21 @@ class SteadyShallowWaterProblem(SteadyProblem):
         self.fields['quadratic_drag_coefficient'] = self.op.set_quadratic_drag_coefficient(self.P1)
         self.fields['manning_drag_coefficient'] = self.op.set_manning_drag_coefficient(self.P1)
 
+    def create_solutions(self):
+        super(SteadyShallowWaterProblem, self).create_solutions()
+        u, eta = self.solution.split()
+        u.rename("Fluid velocity")
+        eta.rename("Elevation")
+        z, zeta = self.adjoint_solution.split()
+        z.rename("Adjoint fluid velocity")
+        zeta.rename("Adjoint elevation")
+
+    def get_tracer(self):
+        return self.solver_obj.fields.tracer_2d
+
+    def project_tracer(self, val, adjoint=False):
+        self.project(val, out=self.get_tracer())
+
     def set_stabilisation(self):
         self.stabilisation = self.stabilisation or 'no'
         if self.stabilisation in ('no', 'lax_friedrichs'):
@@ -56,7 +66,7 @@ class SteadyShallowWaterProblem(SteadyProblem):
         else:
             raise ValueError("Stabilisation method {:s} for {:s} not recognised".format(self.stabilisation, self.__class__.__name__))
 
-    def setup_solver(self):
+    def setup_solver_forward(self):
         """
         Create a Thetis FlowSolver2d object for solving the shallow water equations.
         """
@@ -77,7 +87,7 @@ class SteadyShallowWaterProblem(SteadyProblem):
             else:
                 options.timestepper_options.solver_parameters = op.params
         if op.debug:
-            options.timestepper_options.solver_parameters['snes_monitor'] = None
+            # options.timestepper_options.solver_parameters['snes_monitor'] = None
             print_output(options.timestepper_options.solver_parameters)
         if hasattr(options.timestepper_options, 'implicitness_theta'):
             options.timestepper_options.implicitness_theta = op.implicitness_theta
@@ -128,42 +138,56 @@ class SteadyShallowWaterProblem(SteadyProblem):
         self.sipg_parameter = options.sipg_parameter
 
     def solve_forward(self):
-        self.setup_solver()
+        self.setup_solver_forward()
         self.solver_obj.iterate()
-        self.solution = self.solver_obj.fields.solution_2d
+        self.solution.assign(self.solver_obj.fields.solution_2d)
 
-    def get_bdy_functions(self, eta_in, u_in, bdy_id):
-        b = self.op.bathymetry
-        bdy_len = self.mesh.boundary_len[bdy_id]
-        funcs = self.boundary_conditions.get(bdy_id)
-        if 'elev' in funcs and 'uv' in funcs:
-            eta = funcs['elev']
-            u = funcs['uv']
-        elif 'elev' in funcs and 'un' in funcs:
-            eta = funcs['elev']
-            u = funcs['un']*self.n
-        elif 'elev' in funcs and 'flux' in funcs:
-            eta = funcs['elev']
-            H = eta + b
-            area = H*bdy_len
-            u = funcs['flux']/area*self.n
-        elif 'elev' in funcs:
-            eta = funcs['elev']
-            u = u_in
-        elif 'uv' in funcs:
-            eta = eta_in
-            u = funcs['uv']
-        elif 'un' in funcs:
-            eta = eta_in
-            u = funcs['un']*self.n
-        elif 'flux' in funcs:
-            eta = eta_in
-            H = eta + b
-            area = H*bdy_len
-            u = funcs['flux']/area*self.n
+    def get_bnd_functions(self, *args):
+        b = self.op.bathymetry if self.op.solve_tracer else self.fields['bathymetry']
+        swt = shallowwater_eq.ShallowWaterTerm(self.V, bathymetry=b)
+        return swt.get_bnd_functions(*args, self.boundary_conditions)
+
+    def get_strong_residual_forward(self):
+        u, eta = self.solution.split()
+
+        b = self.fields['bathymetry']
+        nu = self.fields['viscosity']
+        f = self.fields['coriolis']
+        H = b + eta
+
+        R1 = -self.op.g*grad(eta)              # ExternalPressureGradient
+        R2 = -div(H*u)                         # HUDiv
+        R1 += -dot(u, nabla_grad(u))           # HorizontalAdvection
+        if f is not None:
+            R1 += -f*as_vector((-u[1], u[0]))  # Coriolis
+
+        # QuadraticDrag
+        if self.fields['quadratic_drag_coefficient'] is not None:
+            C_D = self.fields['quadratic_drag_coefficient']
+            R1 += -C_D*sqrt(dot(u, u))*u/H
+        elif self.fields['manning_drag_coefficient'] is not None:
+            C_D = op.g*self.fields['manning_drag_coefficient']**2/pow(H, 1/3)
+            R1 += -C_D*sqrt(dot(u, u))*u/H
+
+        # HorizontalViscosity
+        stress = 2*nu*sym(grad(u)) if self.op.grad_div_viscosity else nu*grad(u)
+        dwr += inner(z, div(stress))
+        if self.op.grad_depth_viscosity:
+            R1 += dot(grad(H)/H, stress)
+
+        if hasattr(self, 'extra_strong_residual_terms_momentum'):
+            R1 += self.extra_strong_residual_terms_momentum()
+        if hasattr(self, 'extra_strong_residual_terms_continuity'):
+            R2 += self.extra_strong_residual_terms_continuity()
+
+        name = 'cell_residual_forward'
+        if norm_type == 'L2':
+            inner_product = assemble(self.p0test*(inner(R1, R1) + inner(R2, R2))*dx)
+            self.indicators[name] = project(sqrt(inner_product), self.P0)
         else:
-            raise Exception('Unsupported boundary type {:}'.format(funcs.keys()))
-        return eta, u
+            raise NotImplementedError
+        self.estimate_error(name)
+        return name
 
     def get_dwr_residual_forward(self):
         tpe = self.tp_enriched
@@ -173,13 +197,14 @@ class SteadyShallowWaterProblem(SteadyProblem):
 
         b = tpe.fields['bathymetry']
         nu = tpe.fields['viscosity']
+        f = tpe.fields['coriolis']
         H = b + eta
 
         dwr = -self.op.g*inner(z, grad(eta))                   # ExternalPressureGradient
         dwr += -zeta*div(H*u)                                  # HUDiv
         dwr += -inner(z, dot(u, nabla_grad(u)))                # HorizontalAdvection
-        if tpe.fields['coriolis'] is not None:
-            dwr += -inner(z, tpe.fields['coriolis']*as_vector((-u[1], u[0])))       # Coriolis
+        if f is not None:
+            dwr += -inner(z, f*as_vector((-u[1], u[0])))       # Coriolis
 
         # QuadraticDrag
         if tpe.fields['quadratic_drag_coefficient'] is not None:
@@ -198,8 +223,10 @@ class SteadyShallowWaterProblem(SteadyProblem):
         if hasattr(self, 'extra_residual_terms'):
             dwr += tpe.extra_residual_terms()
 
-        self.indicators['dwr_cell'] = project(assemble(tpe.p0test*abs(dwr)*dx), self.P0)
-        self.estimate_error('dwr_cell')
+        name = 'dwr_cell'
+        self.indicators[name] = project(assemble(tpe.p0test*dwr*dx), self.P0)
+        self.estimate_error(name)
+        return name
 
     def get_dwr_flux_forward(self):
         tpe = self.tp_enriched
@@ -275,7 +302,7 @@ class SteadyShallowWaterProblem(SteadyProblem):
             funcs = bcs.get(j)
 
             if funcs is not None:
-                eta_ext, u_ext = tpe.get_bdy_functions(eta, u, j)
+                eta_ext, u_ext = tpe.get_bnd_functions(eta, u, j)
 
                 # ExternalPressureGradient
                 un_jump = inner(u - u_ext, n)
@@ -335,11 +362,13 @@ class SteadyShallowWaterProblem(SteadyProblem):
             flux_terms += tpe.extra_flux_terms()
 
         # Solve auxiliary finite element problem to get traces on particular element
+        name = 'dwr_flux'
         mass_term = i*tpe.p0trial*dx
         res = Function(tpe.P0)
         solve(mass_term == flux_terms, res)
-        self.indicators['dwr_flux'] = project(assemble(i*res*dx), self.P0)
-        self.estimate_error('dwr_flux')
+        self.indicators[name] = project(assemble(i*res*dx), self.P0)
+        self.estimate_error(name)
+        return name
 
     def custom_adapt(self):
         if self.approach == 'vorticity':
@@ -359,67 +388,44 @@ class SteadyShallowWaterProblem(SteadyProblem):
             eta.rename("Elevation")
             self.solution_file.write(u, eta)
 
-    def get_hessian_metric(self, noscale=False, degree=1, adjoint=False):
+    def get_hessian_metric(self, adjoint=False, **kwargs):
+        kwargs.setdefault('noscale', False)
+        kwargs.setdefault('degree', 1)
+        kwargs.setdefault('mesh', self.mesh)
+        kwargs.setdefault('op', self.op)
         field = self.op.adapt_field
-        sol = self.get_solution(adjoint)
+        sol = self.adjoint_solution if adjoint else self.solution
         u, eta = sol.split()
 
-        def elevation():
-            return steady_metric(eta, noscale=noscale, degree=degree, op=self.op)
-
-        def velocity_x():
-            s = Function(self.P1).interpolate(u[0])
-            return steady_metric(s, noscale=noscale, degree=degree, op=self.op)
-
-        def velocity_y():
-            s = Function(self.P1).interpolate(u[1])
-            return steady_metric(s, noscale=noscale, degree=degree, op=self.op)
-
-        def speed():
-            spd = Function(self.P1).interpolate(sqrt(inner(u, u)))
-            return steady_metric(spd, noscale=noscale, degree=degree, op=self.op)
-
-        def inflow():
-            v = Function(self.P1).interpolate(inner(u, self.op.inflow))
-            return steady_metric(v, noscale=noscale, degree=degree, op=self.op)
-
-        def bathymetry():
-            b = Function(self.P1).interpolate(self.op.bathymetry)
-            return steady_metric(b, noscale=noscale, degree=degree, op=self.op)
-
-        def viscosity():
-            nu = Function(self.P1).interpolate(self.op.viscosity)
-            return steady_metric(nu, noscale=noscale, degree=degree, op=self.op)
-
-        metrics = {'elevation': elevation, 'velocity_x': velocity_x, 'velocity_y': velocity_y,
-                   'speed': speed, 'inflow': inflow,
-                   'bathymetry': bathymetry, 'viscosity': viscosity}
+        fdict = {'elevation': eta, 'velocity_x': u[0], 'velocity_y': u[1],
+             'speed': sqrt(inner(u, u)), 'inflow': inner(u, self.fields['inflow'])}
+        fdict.update(self.fields)
 
         self.M = Function(self.P1_ten)
-        if field in metrics:
-            self.M = metrics[field]()
+        if field in fdict:
+            self.M = steady_metric(fdict[field], **kwargs)
         elif field == 'all_avg':
-            self.M += metrics['velocity_x']()
-            self.M += metrics['velocity_y']()
-            self.M += metrics['elevation']()
+            self.M += steady_metric(fdict['velocity_x'], **kwargs)
+            self.M += steady_metric(fdict['velocity_y'], **kwargs)
+            self.M += steady_metric(fdict['elevation'], **kwargs)
             self.M /= 3.0
         elif field == 'all_int':
-            self.M = metric_intersection(metrics['velocity_x'](), metrics['velocity_y']())
-            self.M = metric_intersection(self.M, metrics['elevation']())
+            self.M = metric_intersection(steady_metric(fdict['velocity_x'], **kwargs),
+                                         steady_metric(fdict['velocity_y'], **kwargs))
+            self.M = metric_intersection(self.M, steady_metric(fdict['elevation'], **kwargs))
         elif 'avg' in field and 'int' in field:
             raise NotImplementedError  # TODO
         elif 'avg' in field:
             fields = field.split('_avg_')
             num_fields = len(fields)
-            print(fields, num_fields)
             for i in range(num_fields):
-                self.M += metrics[fields[i]]()
+                self.M += steady_metric(fdict[fields[i]], **kwargs)
             self.M /= num_fields
         elif 'int' in field:
             fields = field.split('_int_')
-            self.M = metrics[fields[0]]()
+            self.M = steady_metric(fdict[fields[0]], **kwargs)
             for i in range(1, len(fields)):
-                self.M = metric_intersection(self.M, metrics[fields[i]]())
+                self.M = metric_intersection(self.M, steady_metric(fields[f[i]], **kwargs))
         else:
             raise ValueError("Adaptation field {:s} not recognised.".format(field))
 
@@ -444,11 +450,6 @@ class UnsteadyShallowWaterProblem(UnsteadyProblem):
         # Physical fields
         physical_constants['g_grav'].assign(op.g)
 
-        # Parameters for adjoint computation
-        z, zeta = self.adjoint_solution.split()
-        z.rename("Adjoint fluid velocity")
-        zeta.rename("Adjoint elevation")
-
         # Classification
         self.nonlinear = True
 
@@ -456,8 +457,8 @@ class UnsteadyShallowWaterProblem(UnsteadyProblem):
         self.fields = {}
         self.fields['viscosity'] = self.op.set_viscosity(self.P1)
         self.fields['diffusivity'] = self.op.set_diffusivity(self.P1)
-        if self.op.solve_tracer == False:
-            self.fields['bathmetry'] = self.op.set_bathymetry(self.P1DG)
+        if not self.op.solve_tracer:
+            self.fields['bathymetry'] = self.op.set_bathymetry(self.P1DG)
         self.fields['inflow'] = self.op.set_inflow(self.P1_vec)
         self.fields['coriolis'] = self.op.set_coriolis(self.P1)
         self.fields['quadratic_drag_coefficient'] = self.op.set_quadratic_drag_coefficient(self.P1)
@@ -466,6 +467,20 @@ class UnsteadyShallowWaterProblem(UnsteadyProblem):
         
         self.op.set_boundary_surface()
 
+    def create_solutions(self):
+        super(UnsteadyShallowWaterProblem, self).create_solutions()
+        u, eta = self.solution.split()
+        u.rename("Fluid velocity")
+        eta.rename("Elevation")
+        z, zeta = self.adjoint_solution.split()
+        z.rename("Adjoint fluid velocity")
+        zeta.rename("Adjoint elevation")
+
+    def get_tracer(self):
+        return self.solver_obj.fields.tracer_2d
+
+    def project_tracer(self, val, adjoint=False):
+        self.project(val, out=self.get_tracer())
 
     def set_stabilisation(self):
         self.stabilisation = self.stabilisation or 'no'
@@ -479,56 +494,62 @@ class UnsteadyShallowWaterProblem(UnsteadyProblem):
             assert not adjoint
         except AssertionError:
             raise NotImplementedError  # TODO
-        self.setup_solver()
+        self.setup_solver_forward()
         self.solver_obj.iterate(update_forcings=self.op.get_update_forcings(self.solver_obj),
                                 export_func=self.op.get_export_func(self.solver_obj))
         self.solution = self.solver_obj.fields.solution_2d
-        
-        old_mesh = Mesh(Function(self.mesh.coordinates))                
-        P1DG = FunctionSpace(old_mesh, "DG", 1)
-        P1 = FunctionSpace(old_mesh, "CG", 1)    
-        
-        solution_bathymetry = self.solver_obj.fields.bathymetry_2d.copy(deepcopy = True)
-        self.solution_old_bathymetry = Function(P1).project(solution_bathymetry)
-        
+
+        old_mesh = Mesh(Function(self.mesh.coordinates))
+        P1DG_old = FunctionSpace(old_mesh, "DG", 1)
+        P1_old = FunctionSpace(old_mesh, "CG", 1)  
+
+        if isinstance(self.solver_obj.fields.bathymetry_2d, Constant):
+            solution_bathymetry = Constant(self.solver_obj.fields.bathymetry_2d)
+            self.solution_old_bathymetry = Constant(solution_bathymetry)
+        else:
+            solution_bathymetry = self.solver_obj.fields.bathymetry_2d.copy(deepcopy=True)
+            self.solution_old_bathymetry = project(solution_bathymetry, P1_old)
+
         if self.op.solve_tracer:
-            solution_tracer = self.solver_obj.fields.tracer_2d.copy(deepcopy = True)
-            self.solution_old_tracer = Function(P1DG).project(solution_tracer)
-            
-            
-    def setup_solver(self):
+            solution_tracer = self.solver_obj.fields.tracer_2d.copy(deepcopy=True)
+            self.solution_old_tracer = project(solution_tracer, P1DG_old)
+
+    def setup_solver_forward(self):
         if not hasattr(self, 'remesh_step'):
             self.remesh_step = 0
         op = self.op
-        
+
+        # Use appropriate bathymetry
         if hasattr(self, "solution_old_bathymetry"):
-            op.bathymetry = Function(self.P1).project(self.solution_old_bathymetry)
+            if isinstance(self.solution_old_bathymetry, Constant):
+                op.bathymetry = Constant(self.solution_old_bathymetry)
+            else:
+                op.bathymetry = project(self.solution_old_bathymetry, self.P1)
         else:
             op.bathymetry = self.op.set_bathymetry(self.P1)
-        
-        if self.op.solve_tracer:
-            self.solver_obj = solver2d.FlowSolver2d(self.mesh, op.bathymetry)
-        else:
-            self.solver_obj = solver2d.FlowSolver2d(self.mesh, self.fields['bathymetry'])
-        
+        b = op.bathymetry if self.op.solve_tracer else self.fields['bathymetry']
+        self.solver_obj = solver2d.FlowSolver2d(self.mesh, b)
+
         self.solver_obj.export_initial_state = self.remesh_step == 0
 
         # Initial conditions
         u_interp, eta_interp = self.solution.split()
         if op.solve_tracer:
             if hasattr(self, 'solution_old_tracer'):
-                self.tracer_interp = Function(self.P1DG).project(self.solution_old_tracer)         
+                self.tracer_interp = project(self.solution_old_tracer, self.P1DG)
             else:
-                self.tracer_interp = Function(self.P1DG).project(self.op.tracer_init)
-        
+                self.tracer_interp = project(self.op.tracer_init, self.P1DG)
+
         if op.solve_tracer:
             self.uv_d, self.eta_d = self.solution.split()
-            op.set_up_suspended(self.mesh, tracer = self.tracer_interp)
-               
+            op.set_up_suspended(self.mesh, tracer=self.tracer_interp)
+
         options = self.solver_obj.options
-        
+
         options.use_nonlinear_equations = self.nonlinear
         options.check_volume_conservation_2d = True
+        if hasattr(options, 'use_lagrangian_formulation'):  # TODO: Temporary
+            options.use_lagrangian_formulation = op.approach == 'ale'
 
         # Timestepping
         options.timestep = op.dt
@@ -538,14 +559,14 @@ class UnsteadyShallowWaterProblem(UnsteadyProblem):
         if op.params != {}:
             options.timestepper_options.solver_parameters = op.params
         if op.debug:
-            options.timestepper_options.solver_parameters['snes_monitor'] = None
+            # options.timestepper_options.solver_parameters['snes_monitor'] = None
             print_output(options.timestepper_options.solver_parameters)
         if hasattr(options.timestepper_options, 'implicitness_theta'):
             options.timestepper_options.implicitness_theta = op.implicitness_theta
 
         # Outputs
         options.output_directory = self.di
-        
+
         if op.solve_tracer:
             options.fields_to_export = ['uv_2d', 'elev_2d', 'tracer_2d'] if op.plot_pvd else []
             options.fields_to_export_hdf5 = ['uv_2d', 'elev_2d', 'tracer_2d'] if op.save_hdf5 else []
@@ -571,16 +592,15 @@ class UnsteadyShallowWaterProblem(UnsteadyProblem):
         if op.solve_tracer:
             options.tracer_advective_velocity = self.op.corrective_velocity
             options.tracer_source_2d = self.op.source
+
         # Boundary conditions
         self.solver_obj.bnd_functions['shallow_water'] = op.set_boundary_conditions(self.V)
         if op.solve_tracer:
             self.solver_obj.bnd_functions['tracer'] = op.set_boundary_conditions_tracer(self.V)
 
-            
         if op.solve_tracer:
-            
             if self.op.tracer_init is not None:
-                self.solver_obj.assign_initial_conditions(uv = u_interp, elev = eta_interp, tracer = self.tracer_interp)
+                self.solver_obj.assign_initial_conditions(uv=u_interp, elev=eta_interp, tracer=self.tracer_interp)
         else:
             self.solver_obj.assign_initial_conditions(uv=u_interp, elev=eta_interp)        
 
@@ -595,66 +615,64 @@ class UnsteadyShallowWaterProblem(UnsteadyProblem):
         for e in self.solver_obj.exporters.values():
             e.set_next_export_ix(self.solver_obj.i_export)
 
+    def get_bnd_functions(self, *args):
+        b = self.op.bathymetry if self.op.solve_tracer else self.fields['bathymetry']
+        swt = shallowwater_eq.ShallowWaterTerm(self.V, bathymetry=b)
+        return swt.get_bnd_functions(*args, self.boundary_conditions)
+
     def get_qoi_kernel(self):
         self.kernel = self.op.set_qoi_kernel(self.solver_obj)
 
-    def get_hessian_metric(self, noscale=False, degree=1, adjoint=False):
+    def plot_solution(self, adjoint=False):
+        if adjoint:
+            z, zeta = self.adjoint_solution.split()
+            z.rename("Adjoint fluid velocity")
+            zeta.rename("Adjoint elevation")
+            self.adjoint_solution_file.write(z, zeta)
+        else:
+            u, eta = self.solution.split()
+            u.rename("Fluid velocity")
+            eta.rename("Elevation")
+            self.solution_file.write(u, eta)
+
+    def get_hessian_metric(self, adjoint=False, **kwargs):
+        kwargs.setdefault('noscale', False)
+        kwargs.setdefault('degree', 1)
+        kwargs.setdefault('mesh', self.mesh)
+        kwargs.setdefault('op', self.op)
         field = self.op.adapt_field
         sol = self.adjoint_solution if adjoint else self.solution
         u, eta = sol.split()
 
-        def elevation():
-            return steady_metric(eta, noscale=noscale, degree=degree, op=self.op)
-
-        def velocity_x():
-            return steady_metric(u[0], noscale=noscale, degree=degree, op=self.op)
-
-        def velocity_y():
-            return steady_metric(u[1], noscale=noscale, degree=degree, op=self.op)
-
-        def speed():
-            spd = interpolate(sqrt(inner(u, u)), self.P1)  # TODO: Do we need to interpolate?
-            return steady_metric(spd, noscale=noscale, degree=degree, op=self.op)
-
-        def inflow():
-            v = interpolate(inner(u, self.fields['inflow']), self.P1)  # TODO: Do we need to interpolate?
-            return steady_metric(v, noscale=noscale, degree=degree, op=self.op)
-
-        def bathymetry():
-            return steady_metric(self.fields['bathymetry'], noscale=noscale, degree=degree, op=self.op)
-
-        def viscosity():
-            return steady_metric(self.fields['viscosity'], noscale=noscale, degree=degree, op=self.op)
-
-        # TODO: This will all be simpler when fields dict is implemented
-        metrics = {'elevation': elevation, 'velocity_x': velocity_x, 'velocity_y': velocity_y,
-                   'speed': speed, 'inflow': inflow,
-                   'bathymetry': bathymetry, 'viscosity': viscosity}
+        fdict = {'elevation': eta, 'velocity_x': u[0], 'velocity_y': u[1],
+             'speed': sqrt(inner(u, u)), 'inflow': inner(u, self.fields['inflow'])}
+        fdict.update(self.fields)
 
         self.M = Function(self.P1_ten)
-        if field in metrics:
-            self.M = metrics[field]()
+        if field in fdict:
+            self.M = steady_metric(fdict[field], **kwargs)
         elif field == 'all_avg':
-            self.M += metrics['velocity_x']()
-            self.M += metrics['velocity_y']()
-            self.M += metrics['elevation']()
+            self.M += steady_metric(fdict['velocity_x'], **kwargs)
+            self.M += steady_metric(fdict['velocity_y'], **kwargs)
+            self.M += steady_metric(fdict['elevation'], **kwargs)
             self.M /= 3.0
         elif field == 'all_int':
-            self.M = metric_intersection(metrics['velocity_x'](), metrics['velocity_y']())
-            self.M = metric_intersection(self.M, metrics['elevation']())
+            self.M = metric_intersection(steady_metric(fdict['velocity_x'], **kwargs),
+                                         steady_metric(fdict['velocity_y'], **kwargs))
+            self.M = metric_intersection(self.M, steady_metric(fdict['elevation'], **kwargs))
         elif 'avg' in field and 'int' in field:
             raise NotImplementedError  # TODO
         elif 'avg' in field:
             fields = field.split('_avg_')
             num_fields = len(fields)
             for i in range(num_fields):
-                self.M += metrics[fields[i]]()
+                self.M += steady_metric(fdict[fields[i]], **kwargs)
             self.M /= num_fields
         elif 'int' in field:
             fields = field.split('_int_')
-            self.M = metrics[fields[0]]()
+            self.M = steady_metric(fdict[fields[0]], **kwargs)
             for i in range(1, len(fields)):
-                self.M = metric_intersection(self.M, metrics[fields[i]]())
+                self.M = metric_intersection(self.M, steady_metric(fields[f[i]], **kwargs))
         else:
             raise ValueError("Adaptation field {:s} not recognised.".format(field))
 

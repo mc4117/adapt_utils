@@ -43,8 +43,7 @@ class SteadyProblem():
         # Setup problem
         op.print_debug(op.indent+"Building mesh...")
         self.set_mesh(mesh, hierarchy=hierarchy)
-        if op.approach == 'monge_ampere':
-            self.am_init = self.am.copy()  # FIXME: Less hacky
+        self.init_mesh = Mesh(Function(self.mesh.coordinates))
         op.print_debug(op.indent+"Building function spaces...")
         self.create_function_spaces()
         op.print_debug(op.indent+"Building solutions...")
@@ -202,11 +201,25 @@ class SteadyProblem():
         """
         Solve adjoint problem using method specified by `discrete_adjoint` boolean kwarg.
         """
+        num_cells = self.mesh.num_cells()
+        el = self.V.ufl_element()
+        deg = el.degree()
+        family = el.family()
+        if family == "Lagrange":
+            space = "P{:d}".format(deg)
+        elif family == "Discontinuous Lagrange":
+            space = "P{:d}DG".format(deg)
+        elif family == "Mixed" and self.op.family == 'dg-dg':
+            space = "P{:d}DG-P{:d}DG".format(deg, deg)
+        elif family == "Mixed" and self.op.family == 'dg-cg':
+            space = "P{:d}DG-P{:d}".format(deg-1, deg)
+        else:
+            raise NotImplementedError("Unsupported function space {:s}.".format(family))
+        approach = 'discrete' if self.discrete_adjoint else 'continuous'
+        print_output("Solving {:s} adjoint problem in {:s} space on a mesh with {:d} local elements".format(approach, space, num_cells))
         if self.discrete_adjoint:
-            print_output("Solving discrete adjoint problem on mesh with {:d} local elements".format(self.mesh.num_cells()))
             self.solve_discrete_adjoint()
         else:
-            print_output("Solving continuous adjoint problem on mesh with {:d} local elements".format(self.mesh.num_cells()))
             self.solve_continuous_adjoint()
         self.plot_solution(adjoint=True)
 
@@ -267,9 +280,6 @@ class SteadyProblem():
         """
         return self.adjoint_solution if adjoint else self.solution
     
-    def get_tracer(self):
-        return self.solver_obj.fields.tracer_2d
-
     def get_error(self, adjoint=False):
         """
         Retrieve forward or adjoint error, as specified by boolean kwarg `adjoint`.
@@ -345,38 +355,127 @@ class SteadyProblem():
         """
         self.project(val, out=self.get_solution(adjoint=adjoint))
         
-    def project_tracer(self, val, adjoint = False):
-        self.project(val, out = self.get_tracer())
-
     def get_qoi_kernel(self):
         """
         Derivative `g` of functional of interest `J`. i.e. For solution `u` we have
             J(u) = g . u
         """
-        raise NotImplementedError("Should be implemented in derived class.")
+        if not hasattr(self.op, 'set_qoi_kernel'):
+            raise NotImplementedError("Should be implemented in derived class.")
+        self.kernel = self.op.set_qoi_kernel(self.P0)
+        return self.kernel
 
     def quantity_of_interest(self):
         """
         Functional of interest which takes the PDE solution as input.
         """
-        if not hasattr(self, 'kernel'):
-            self.get_qoi_kernel()
+        self.get_qoi_kernel()
         return assemble(inner(self.solution, self.kernel)*dx(degree=12))
 
-    def get_strong_residual(self, adjoint=False):
+    def get_strong_residual(self, adjoint=False, **kwargs):
         """
         Compute the strong residual for the forward or adjoint PDE, as specified by the `adjoint`
         boolean kwarg.
         """
-        if adjoint:
-            self.get_strong_residual_forward()
-        else:
-            self.get_strong_residual_adjoint()
+        f = self.get_strong_residual_adjoint if adjoint else self.get_strong_residual_forward
+        return f(**kwargs)
 
-    def get_strong_residual_forward(self):
+    def get_flux(self, adjoint=False, **kwargs):
+        """
+        Evaluate flux terms for forward or adjoint PDE, as specified by the `adjoint` boolean kwarg.
+        """
+        f = self.get_flux_adjoint if adjoint else self.get_flux_forward
+        return f(**kwargs)
+
+    def get_scaled_residual(self, adjoint=False, norm_type='L2'):
+        r"""
+        Evaluate the scaled form of the residual, as used in [Becker & Rannacher, 2001].
+        i.e. the $\rho_K$ term.
+        """
+        self.get_strong_residual(adjoint=adjoint, norm_type=norm_type)
+        self.get_flux(adjoint=adjoint, norm_type=norm_type)
+        rname, fname, sname = 'cell_residual', 'flux', 'scaled_residual'
+        ext = 'adjoint' if adjoint else 'forward'
+        rname = '_'.join([rname, ext])
+        fname = '_'.join([fname, ext])
+        sname = '_'.join([sname, ext])
+        rho = self.indicators[rname] + self.indicators[fname]/sqrt(self.h)
+        self.indicators[sname] = assemble(self.p0test*rho*dx)
+        self.estimate_error(sname)
+        return sname
+
+    def get_scaled_weights(self, adjoint=False, norm_type='L2'):  # TODO: Needs overriding if DG?
+        r"""
+        Evaluate the scaled form of the residual weights, as used in [Becker & Rannacher, 2001].
+        i.e. the $\omega_K$ term.
+        """
+        self.solve_high_order(adjoint=not adjoint)
+        error = self.error if adjoint else self.adjoint_error
+        sname = '_'.join(['scaled_weights', 'adjoint' if adjoint else 'forward'])
+        if norm_type is None:
+            e = error
+        elif norm_type == 'L1':
+            e = abs(error)
+        elif norm_type == 'L2':
+            e = error*error
+        else:
+            raise ValueError("Norm should be chosen from {None, 'L1' or 'L2'}.")
+        tpe = self.tp_enriched
+        i = tpe.p0test
+        mass_term = i*tpe.p0trial*dx
+        flux_term = ((i*e)('+') + (i*e)('-'))*dS + i*e*ds
+        flux = Function(tpe.P0)
+        solve(mass_term == flux_term, flux)
+        omega = e + flux*sqrt(tpe.h)
+        self.indicators[sname] = project(assemble(i*omega*dx), self.P0)
+        self.estimate_error(sname)
+        return sname
+
+    def get_dwr_upper_bound(self, adjoint=False, **kwargs):
+        r"""
+        Evaluate an upper bound for the DWR given by the product of residual and weights,
+        as used in [Becker & Rannacher, 2001].
+        i.e. $\rho_K \omega_K$.
+        """
+        self.get_scaled_residual(adjoint=adjoint, **kwargs)
+        self.get_scaled_weights(adjoint=adjoint, **kwargs)
+        rho, omega, name = 'scaled_residual', 'scaled_weights', 'upper_bound'
+        ext = 'adjoint' if adjoint else 'forward'
+        rho = '_'.join([rho, ext])
+        omega = '_'.join([omega, ext])
+        name = '_'.join([name, ext])
+        ext = 'adjoint' if adjoint else 'forward'
+        self.indicators[name] = assemble(self.p0test*self.indicators[rho]*self.indicators[omega]*dx)
+        self.estimate_error(name)
+        return name
+
+    def get_difference_quotient(self, adjoint=False, **kwargs):
+        """
+        Evaluate difference quotient approximation to the DWR given by the product of residual and
+        flux term evaluated at the adjoint solution, as used in [Becker & Rannacher, 2001].
+        """
+        self.get_scaled_residual(adjoint=adjoint, **kwargs)
+        self.get_flux(adjoint=adjoint, residual_approach='difference_quotient', **kwargs)
+        rho, omega, name = 'scaled_residual', 'flux', 'difference_quotient'
+        ext = 'adjoint' if adjoint else 'forward'
+        rho = '_'.join([rho, ext])
+        omega = '_'.join([omega, ext])
+        name = '_'.join([name, ext])
+        ext = 'adjoint' if adjoint else 'forward'
+        self.indicators[name] = assemble(self.p0test*self.indicators[rho]*self.indicators[omega]*dx)
+        self.estimate_error(name)
+        return name
+
+    def get_strong_residual_forward(self, norm_type=None):
         raise NotImplementedError("Should be implemented in derived class.")
 
-    def get_strong_residual_adjoint(self):
+    def get_strong_residual_adjoint(self, norm_type=None):
+        raise NotImplementedError("Should be implemented in derived class.")
+
+    def get_flux_forward(self):
+        raise NotImplementedError("Should be implemented in derived class.")
+
+    def get_flux_adjoint(self):
         raise NotImplementedError("Should be implemented in derived class.")
 
     def get_dwr_residual(self, adjoint=False):
@@ -384,10 +483,7 @@ class SteadyProblem():
         Evaluate the cellwise component of the forward or adjoint Dual Weighted Residual (DWR) error
         estimator (see [Becker and Rannacher, 2001]), as specified by the boolean kwarg `adjoint`.
         """
-        if adjoint:
-            self.get_dwr_residual_adjoint()
-        else:
-            self.get_dwr_residual_forward()
+        return self.get_dwr_residual_adjoint() if adjoint else self.get_dwr_residual_forward()
 
     def get_dwr_residual_forward(self):
         raise NotImplementedError("Should be implemented in derived class.")
@@ -400,10 +496,7 @@ class SteadyProblem():
         Evaluate the edgewise component of the forward or adjoint Dual Weighted Residual (DWR) error
         estimator (see [Becker and Rannacher, 2001]), as specified by the boolean kwarg `adjoint`.
         """
-        if adjoint:
-            self.get_dwr_flux_adjoint()
-        else:
-            self.get_dwr_flux_forward()
+        return self.get_dwr_flux_adjoint() if adjoint else self.get_dwr_flux_forward()
 
     def get_dwr_flux_forward(self):
         raise NotImplementedError("Should be implemented in derived class.")
@@ -418,29 +511,24 @@ class SteadyProblem():
 
         A P1 field to be used for isotropic mesh adaptation is stored as `self.indicator`.
         """
-        label = 'dwr'
-        cell_label = 'dwr_cell'
-        flux_label = 'dwr_flux'
-        if adjoint:
-            label += '_adjoint'
-            cell_label += '_adjoint'
-            flux_label += '_adjoint'
+        name = '_'.join(['dwr', 'adjoint' if adjoint else 'forward'])
 
         # Compute DWR residual and flux terms
         self.solve_high_order(adjoint=not adjoint)
-        self.get_dwr_residual(adjoint=adjoint)
-        self.get_dwr_flux(adjoint=adjoint)
+        cname = self.get_dwr_residual(adjoint=adjoint)
+        fname = self.get_dwr_flux(adjoint=adjoint)
 
         # Indicate error in P1 space
-        self.indicator = Function(self.P1, name=label)
-        self.indicator.interpolate(abs(self.indicators[cell_label] + self.indicators[flux_label]))
-        self.indicators[label] = Function(self.P0, name=label)
-        self.indicators[label].interpolate(abs(self.indicators[cell_label] + self.indicators[flux_label]))
+        self.indicator = Function(self.P1, name=name)
+        self.indicator.interpolate(abs(self.indicators[cname] + self.indicators[fname]))
+        self.indicators[name] = Function(self.P0, name=name)
+        self.indicators[name].interpolate(abs(self.indicators[cname] + self.indicators[fname]))
 
         # Estimate error
-        if not label in self.estimators:
-            self.estimators[label] = []
-        self.estimators[label].append(self.estimators[cell_label][-1] + self.estimators[flux_label][-1])
+        if not name in self.estimators:
+            self.estimators[name] = []
+        self.estimators[name].append(self.estimators[cname][-1] + self.estimators[fname][-1])
+        return name
 
     def dwp_indication(self):
         """
@@ -448,28 +536,42 @@ class SteadyProblem():
         used for mesh adaptive tsunami modelling in [Davis and LeVeque, 2016]. Here 'DWP' is used
         to stand for Dual Weighted Primal.
         """
+        name = 'dwp'
         prod = inner(self.solution, self.adjoint_solution)
-        self.indicators['dwp'] = assemble(self.p0test*prod*dx)
+        self.indicators[name] = assemble(self.p0test*prod*dx)
         self.indicator = interpolate(abs(prod), self.P1)
-        self.indicator.rename('dwp')
-        self.estimate_error('dwp')
+        self.indicator.rename(name)
+        self.estimate_error(name)
+        return name
 
-    def get_hessian_metric(self, adjoint=False):
+    def get_hessian_metric(self, adjoint=False, **kwargs):
         """
         Compute an appropriate Hessian metric for the problem at hand. This is inherently
         problem-dependent, since the choice of field for adaptation is not universal.
 
         Hessian metric should be computed and stored as `self.M`.
         """
-        raise NotImplementedError("Should be implemented in derived class.")
+        try:
+            assert self.V.value_size == 1
+        except AssertionError:
+            raise NotImplementedError("Should be implemented in derived class.")
+        f = self.adjoint_solution if adjoint else self.solution
+        nrm = norm(f)
+        if nrm < 1e-10:
+            raise ValueError("Cannot compute Hessian as norm is too small: {:.4e}".format(nrm))
+        self.M = steady_metric(f, op=self.op, **kwargs)
 
     def get_hessian(self, adjoint=False):
         """
         Compute an appropriate Hessian for the problem at hand. This is inherently
         problem-dependent, since the choice of field for adaptation is not universal.
         """
-        self.get_hessian_metric(adjoint=adjoint, noscale=True)
-        return self.M
+        try:
+            assert self.V.value_size == 1
+        except AssertionError:
+            raise NotImplementedError("Should be implemented in derived class.")
+        f = self.adjoint_solution if adjoint else self.solution
+        return steady_metric(f, mesh=self.mesh, noscale=True, op=self.op)
 
     def get_isotropic_metric(self):
         """
@@ -504,16 +606,20 @@ class SteadyProblem():
         op2.par_loop(kernel, self.P1.node_set, H_scaled.dat(op2.RW), H.dat(op2.READ), self.indicator.dat(op2.READ))
         self.M = steady_metric(self.solution if adjoint else self.adjoint_solution, H=H, op=self.op)
 
+    def plot_mesh(self):
+        meshfile = File(os.path.join(self.di, 'mesh.pvd'))
+        #try:
+        #    meshfile.write(self.mesh)  # This is allowed in modern firedrake
+        #except ValueError:
+        meshfile.write(self.mesh.coordinates)
+
     def plot(self):
         """
         Plot current mesh and indicator fields, if available.
         """
-        meshfile = File(os.path.join(self.di, 'mesh.pvd'))
-        try:
-            meshfile.write(self.mesh)  # This is allowed in modern firedrake
-        except ValueError:
-            meshfile.write(self.mesh.coordinates)
+        self.plot_mesh()
         for key in self.indicators:
+            # tmp = interpolate(abs(self.indicators[key]/self.estimators[key][-1]), self.P0)
             tmp = interpolate(abs(self.indicators[key]), self.P0)
             tmp.rename(key)
             File(os.path.join(self.di, key + '.pvd')).write(tmp)
@@ -598,22 +704,25 @@ class SteadyProblem():
         # Anisotropic a posteriori (see [Power et al., 2006])
         elif 'power' in approach:
             self.get_power_metric(adjoint=adjoint)
-            self.indicators[approach] = self.indicators['_'.join(['cell_residual', 'adjoint' if adjoint else 'forward'])].copy()
+            name = '_'.join(['cell_residual', 'adjoint' if adjoint else 'forward'])
+            self.indicators[approach] = self.indicators[name].copy(deepcopy=True)
             if not approach in ('power', 'power_adjoint'):
                 M = self.M.copy()
                 self.get_power_metric(adjoint=not adjoint)
-                self.indicators[approach] += self.indicators['_'.join(['cell_residual', 'adjoint' if not adjoint else 'forward'])].copy()
+                name = '_'.join(['cell_residual', 'adjoint' if not adjoint else 'forward'])
+                self.indicators[approach] += self.indicators[name].copy(deepcopy=True)
                 self.M = combine_metrics(M, self.M, average=average)
             self.estimate_error()
 
         # Isotropic a posteriori (see Carpio et al., 2013])
         elif 'carpio_isotropic' in approach:
             self.dwr_indication(adjoint=adjoint)
+            name = 'dwr_adjoint' if adjoint else 'dwr_forward'
             self.indicators[approach] = Function(self.P0)
-            self.indicators[approach] += self.indicators['dwr_adjoint' if adjoint else 'dwr']
+            self.indicators[approach] += self.indicators[name]
             if approach == 'carpio_isotropic_both':
                 self.dwr_indication(adjoint=not adjoint)
-                self.indicators[approach] += self.indicators['dwr_adjoint' if not adjoint else 'dwr']
+                self.indicators[approach] += self.indicators[name]
             amd = AnisotropicMetricDriver(self.am, indicator=self.indicators[approach], op=self.op)
             amd.get_isotropic_metric()
             self.M = amd.p1metric
@@ -635,7 +744,8 @@ class SteadyProblem():
             self.estimate_error()
         elif 'carpio' in approach:
             self.dwr_indication(adjoint=adjoint)
-            self.indicators[approach] = self.indicators['dwr_adjoint' if adjoint else 'dwr']
+            name = 'dwr_adjoint' if adjoint else 'dwr_forward'
+            self.indicators[approach] = self.indicators[name]
             self.get_hessian_metric(noscale=True, degree=1, adjoint=adjoint)
             amd = AnisotropicMetricDriver(self.am, hessian=self.M, indicator=self.indicators[approach], op=self.op)
             amd.get_anisotropic_metric()
@@ -663,7 +773,8 @@ class SteadyProblem():
         assert approach in self.indicators
         if not approach in self.estimators:
             self.estimators[approach] = []
-        self.estimators[approach].append(self.indicators[approach].vector().gather().sum())
+        tmp = interpolate(abs(self.indicators[approach]), self.P0)
+        self.estimators[approach].append(tmp.vector().gather().sum())
 
     def plot_error_estimate(self, approach):
         raise NotImplementedError  # TODO
@@ -690,13 +801,15 @@ class SteadyProblem():
 
                 
             # Create MeshMover object and establish coordinate transformation
-            mesh_mover = MeshMover(self.am_init.mesh, self.monitor_function, op=self.op)
+            mesh_mover = MeshMover(self.init_mesh, self.monitor_function, op=self.op)
             mesh_mover.adapt()
 
             # Create a temporary Problem based on the new mesh
             am_copy = self.am.copy()
             
-            tmp = type(self)(self.op, mesh=am_copy.mesh, discrete_adjoint=self.discrete_adjoint,
+            op_copy = type(self.op)(mesh=am_copy.mesh)
+            op_copy.update(self.op)
+            tmp = type(self)(op_copy, mesh=am_copy.mesh, discrete_adjoint=self.discrete_adjoint,
                              prev_solution=self.prev_solution, levels=self.levels)
             x = Function(tmp.mesh.coordinates)
 
@@ -743,6 +856,9 @@ class SteadyProblem():
         self.create_function_spaces()
         self.create_solutions()
         self.set_fields(adapted=True)
+        if hasattr(self, 'set_start_condition'):
+            self.set_start_condition()
+        self.set_stabilisation()
         self.boundary_conditions = self.op.set_boundary_conditions(self.V)
 
     def initialise_mesh(self, approach='hessian', adapt_field=None, num_adapt=None, alpha=1.0, beta=1.0):
@@ -773,7 +889,7 @@ class SteadyProblem():
                 f = ff[0]
                 def monitor(mesh):
                     P1 = FunctionSpace(mesh, "CG", 1)
-                    b = project(self.fields[f], P1)
+                    b = project(self.solution if f == 'solution' else self.fields[f], P1)
                     H = construct_hessian(b, op=self.op)
                     return 1.0 + alpha*local_frobenius_norm(H, mesh=mesh, space=P1)
             else:
@@ -850,7 +966,7 @@ class SteadyProblem():
             num_cells_old = num_cells
             estimator_old = estimator
             dofs = self.V.dof_count
-            dofs = dofs if isinstance(dofs, int) else sum(dofs)  # TODO: parallelise
+            dofs = dofs if self.V.value_size == 1 else sum(dofs)  # TODO: parallelise
         if outer_iteration is None:
             print_output('\n' + 80*'#' + '\n' + 37*' ' + 'SUMMARY\n' + 80*'#')
             print_output("Approach:             '{:s}'".format(self.approach))
@@ -943,8 +1059,7 @@ class UnsteadyProblem(SteadyProblem):
         self.num_exports = int(np.floor((op.end_time - op.dt)/op.dt/op.dt_per_export))
 
     def create_solutions(self):
-        self.solution = Function(self.V, name='Solution')
-        self.adjoint_solution = Function(self.V, name='Adjoint solution')
+        super(UnsteadyProblem, self).create_solutions()
         self.solution_old = Function(self.V, name='Old solution')
         self.adjoint_solution_old = Function(self.V, name='Old adjoint solution')
 
@@ -988,6 +1103,7 @@ class UnsteadyProblem(SteadyProblem):
             #  * Use 'fixed_mesh_plot' to call `plot` at each export.
             if self.approach == 'fixed_mesh':
                 self.solve_step(adjoint=adjoint)
+                print('!!!')
                 break
             
             # Adaptive mesh case
@@ -1024,18 +1140,16 @@ class UnsteadyProblem(SteadyProblem):
             self.project_solution(solution)
         self.get_qoi_kernel()
 
-    def quantity_of_interest(self):
-        """
-        Functional of interest which takes the PDE solution as input.
-        """
-        if not hasattr(self, 'kernel'):
-            self.get_qoi_kernel()
-        raise NotImplementedError  # TODO: account for time integral forms
+    # def quantity_of_interest(self):
+    #     """
+    #     Functional of interest which takes the PDE solution as input.
+    #     """
+    #     if not hasattr(self, 'kernel'):
+    #         self.get_qoi_kernel()
+    #     raise NotImplementedError  # TODO: account for time integral forms
 
     def get_adjoint_state(self, variable='Tracer2d'):
-        """
-        Get adjoint solution at timestep i.
-        """
+        """Get adjoint solution at current remesh step."""
         if self.approach in ('uniform', 'hessian', 'vorticity'):
             return
         if not hasattr(self, 'V_orig'):
@@ -1066,3 +1180,29 @@ class UnsteadyProblem(SteadyProblem):
         The resulting P0 field should be stored as `self.indicator`.
         """
         raise NotImplementedError  # TODO: Use steady format, but need to get adjoint sol
+
+    def solve_ale(self, solve_pde=True, check_inverted=True):
+        """
+        Solve unsteady problem using Arbitrary Lagrangian-Eulerian (ALE) mesh movement.
+
+        The mesh movement is driven by a `MeshMover` object, for which a prescribed velocity needs
+        to be chosen. Preset options are 'zero' and 'fluid', which correspond to the Eulerian and
+        Lagrangian approaches, respectively.
+        """
+        op = self.op
+        self.mm = MeshMover(self.mesh, monitor_function=None, method='ale', op=op)
+        self.setup_solver_forward()
+        self.step_end, self.remesh_step = op.dt_per_export*op.dt, 0
+        while self.step_end < op.end_time:
+            self.mm.adapt_ale()                          # Solve mesh movement
+            if solve_pde:
+                self.solve_step()                        # Solve PDE
+            self.mesh.coordinates.assign(self.mm.x_new)  # Update mesh
+            if check_inverted:
+                try:
+                    self.am.check_inverted()
+                except ValueError:
+                    self.plot_mesh()
+                    raise ValueError("Timestepping loop terminated after {:d} iterations due to inverted element.".format(i))
+            self.step_end += op.dt_per_export*op.dt
+            self.remesh_step += 1

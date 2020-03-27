@@ -14,7 +14,7 @@ class ShallowWaterOptions(Options):
     solve_tracer = Bool(False).tag(config=True)
 
     # Physical
-    bathymetry = FiredrakeScalarExpression(None, allow_none=True).tag(config=True)#FiredrakeScalarExpression(Constant(1.0)).tag(config=True)
+    bathymetry = FiredrakeScalarExpression(None, allow_none=True).tag(config=True)
     base_viscosity = NonNegativeFloat(0.0).tag(config=True)
     base_diffusivity = NonNegativeFloat(0.0).tag(config=True)
     viscosity = FiredrakeScalarExpression(Constant(0.0)).tag(config=True)
@@ -30,7 +30,7 @@ class ShallowWaterOptions(Options):
     # Model
     grad_div_viscosity = Bool(False).tag(config=True)
     grad_depth_viscosity = Bool(False).tag(config=True)
-    family = Enum(['dg-dg', 'rt-dg', 'dg-cg'], default_value='dg-dg').tag(config=True)
+    family = Enum(['dg-dg', 'rt-dg', 'dg-cg', 'taylor-hood'], default_value='dg-dg').tag(config=True)
     wetting_and_drying = Bool(False).tag(config=True)
     wetting_and_drying_alpha = FiredrakeScalarExpression(Constant(0.0)).tag(config=True)
 
@@ -51,7 +51,6 @@ class ShallowWaterOptions(Options):
         """Should be implemented in derived class."""
         self.viscosity = Constant(self.base_viscosity)
         return self.viscosity
-    
 
     def set_source_tracer(self, fs, solver_obj):
         """Should be implemented in derived class."""
@@ -61,7 +60,6 @@ class ShallowWaterOptions(Options):
         """Should be implemented in derived class."""
         self.diffusivity = Constant(self.base_diffusivity)
         return self.diffusivity
-    
 
     def set_inflow(self, fs):
         """Should be implemented in derived class."""

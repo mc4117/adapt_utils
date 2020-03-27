@@ -14,19 +14,19 @@ def lp_norm(f, p=2):
     """
     if p is None or 'inf' in p:
         return f.max()
-    if 'l' in p:
+    elif p.startswith('l'):
         p = float(p[1:])
-    if p == 1 or np.allclose(p, 1.0):
-        return np.sum(np.abs(fi) for fi in f)
-    else:
-        assert p > 1
+        try:
+            assert p >= 1
+        except AssertionError:
+            raise ValueError("Norm type l{:} not recognised.".format(p))
         return pow(np.sum(pow(np.abs(fi), p) for fi in f), 1/p)
+    else:
+        raise ValueError("Norm type {:} not recognised.".format(p))
 
 def total_variation(f):
     """Calculate the total variation of a 1D array f."""
-    n = len(f)
-    tv = 0.0
-    i0 = 0
+    n, tv, i0 = len(f), 0.0, 0
     sign_ = np.sign(f[1] - f[i0])
     for i in range(2, n):
         sign = np.sign(f[i] - f[i-1])
@@ -43,30 +43,38 @@ def local_norm(f, norm_type='L2'):
     typ = norm_type.lower()
     mesh = f.function_space().mesh()
     i = TestFunction(FunctionSpace(mesh, "DG", 0))
+    p = 2
+    if typ.startswith('l'):
+        try:
+            p = int(typ[1:])
+            if p < 1:
+                raise ValueError
+        except ValueError:
+            raise ValueError("Don't know how to interpret {:s}-norm.".format(norm_type))
+    elif typ not in ('h1', 'hdiv', 'hcurl'):
+        raise RuntimeError("Unknown norm type '{:s}'".format(norm_type))
 
     if isinstance(f, Function):
-        if typ == 'l2':
-            form = i*inner(f, f)*dx
-        elif typ == 'h1':
+        if typ == 'h1':
             form = i*inner(f, f)*dx + i*inner(grad(f), grad(f))*dx
-        elif typ == "hdiv":
+        elif typ == 'hdiv':
             form = i*inner(f, f)*dx + i*div(f)*div(f)*dx
-        elif typ == "hcurl":
+        elif typ == 'hcurl':
             form = i*inner(f, f)*dx + i*inner(curl(f), curl(f))*dx
         else:
-            raise RuntimeError("Unknown norm type '{:s}'".format(norm_type))
+            expr = inner(f, f)
+            form = i*(expr**(p/2))*dx
     else:
-        if typ == 'l2':
-            form = i*sum(inner(fi, fi) for fi in f)*dx
-        elif typ == 'h1':
+        if typ == 'h1':
             form = i*sum(inner(fi, fi)*dx + inner(grad(fi), grad(fi)) for fi in f)*dx
-        elif typ == "hdiv":
+        elif typ == 'hdiv':
             form = i*sum(inner(fi, fi)*dx + div(fi) * div(fi) for fi in f)*dx
-        elif typ == "hcurl":
+        elif typ == 'hcurl':
             form = i*sum(inner(fi, fi)*dx + inner(curl(fi), curl(fi)) for fi in f)*dx
         else:
-            raise RuntimeError("Unknown norm type '{:s}'".format(norm_type))
-    return sqrt(assemble(form))
+            expr = sum(inner(fi, fi) for fi in f)
+            form = i*(expr**(p/2))*dx
+    return assemble(form)**(1/p)
 
 def frobenius_norm(matrix, mesh=None):
     """Calculate the Frobenius norm of `matrix`."""

@@ -18,3 +18,4 @@ adjoint.py
 
 tracer/*
 case_studies/*
+*.patch

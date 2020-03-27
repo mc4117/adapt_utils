@@ -1,6 +1,6 @@
 from firedrake import *
 
-from adapt_utils.options import *
+from adapt_utils.options import Options
 from adapt_utils.adapt.metric import isotropic_metric
 from adapt_utils.adapt.kernels import *
 
@@ -67,7 +67,7 @@ class AnisotropicMetricDriver():
         assert self.p0hessian is not None
         kernel = eigen_kernel(get_reordered_eigendecomposition, self.dim)
         op2.par_loop(kernel, self.P0_ten.node_set, self.evec.dat(op2.RW), self.eval.dat(op2.RW), self.p0hessian.dat(op2.READ))
-        s = sqrt(abs(self.eval[0]/self.eval[1]))
+        s = sqrt(abs(self.eval[1]/self.eval[0]))
         self.eval.interpolate(as_vector([abs(self.K_hat/self.K_opt/s), abs(self.K_hat/self.K_opt*s)]))
 
     def get_element_size(self):
@@ -98,7 +98,7 @@ class AnisotropicMetricDriver():
 
         NOTE: Assumes eigevalues are already squared.
         """
-        kernel = eigen_kernel(set_eigendecomposition, self.dim)
+        kernel = eigen_kernel(set_eigendecomposition_transpose, self.dim)
         op2.par_loop(kernel, self.P0_ten.node_set, self.p0metric.dat(op2.RW), self.evec.dat(op2.READ), self.eval.dat(op2.READ))
 
     def project_metric(self):
