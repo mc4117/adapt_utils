@@ -72,7 +72,6 @@ def gradient_interface_monitor(mesh, alpha = 400.0, gamma = 0.0):
     solve(a == 0, H)
     
     return H
-    #return sqrt(1.0 + alpha*norm_two_proj + gamma*norm_one_proj)
 
 tp.monitor_function = gradient_interface_monitor
 tp.solve(uses_adjoint=False)
