@@ -65,6 +65,8 @@ class BalzanoOptions(MorphOptions):
         # Initial
         self.uv_init = as_vector([1.0e-7, 0.0])
         self.eta_init = Constant(0.0)
+        self.uv_d = Function(self.P1_vec_dg).project(self.uv_init)
+        self.eta_d = Function(self.P1DG).project(self.eta_init)
 
         self.get_initial_depth(VectorFunctionSpace(self.default_mesh, "CG", 2)*P1DG)       
         
