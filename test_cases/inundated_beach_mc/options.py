@@ -30,10 +30,11 @@ class BalzanoOptions(MorphOptions):
         self.basin_x = 13800.0  # Length of wet region
 
         self.default_mesh = RectangleMesh(17*nx, ny, 1.5*self.basin_x, 1200.0)
-        P1DG = FunctionSpace(self.default_mesh, "DG", 1)
-        self.eta_tilde = Function(P1DG, name='Modified elevation')
+        self.P1DG = FunctionSpace(self.default_mesh, "DG", 1)
+        self.eta_tilde = Function(self.P1DG, name='Modified elevation')
         self.V = FunctionSpace(self.default_mesh, "CG", 1)
         self.vector_cg = VectorFunctionSpace(self.default_mesh, "CG", 1)
+        self.P1_vec_dg = VectorFunctionSpace(self.default_mesh, "DG", 1)
         
         self.plot_pvd = True        
                 
@@ -68,10 +69,14 @@ class BalzanoOptions(MorphOptions):
         self.uv_d = Function(self.P1_vec_dg).project(self.uv_init)
         self.eta_d = Function(self.P1DG).project(self.eta_init)
 
-        self.get_initial_depth(VectorFunctionSpace(self.default_mesh, "CG", 2)*P1DG)       
-        
+        self.get_initial_depth(VectorFunctionSpace(self.default_mesh, "CG", 2)*self.P1DG)       
+
+        self.convective_vel_flag = False
+        self.t_old = Constant(0.0)      
+        self.slope_eff = False
+        self.angle_correction = False
         self.set_up_suspended(self.default_mesh)
-        
+        self.set_up_bedload(self.default_mesh)
 
         # Stabilisation
         self.stabilisation = 'no'
@@ -88,6 +93,8 @@ class BalzanoOptions(MorphOptions):
         self.dt_per_remesh = 6
         self.timestepper = 'CrankNicolson'
         # self.implicitness_theta = 0.5  # TODO
+        
+        self.eta_tilde_file = File(os.path.join(self.di, 'eta_tilde.pvd'))
 
         # Adaptivity
         self.h_min = 1e-8
@@ -110,28 +117,26 @@ class BalzanoOptions(MorphOptions):
             self.quadratic_drag_coefficient = interpolate(self.get_cfactor(), fs)
         return self.quadratic_drag_coefficient
 
-
-    def set_source_tracer(self, fs, solver_obj, init = False):
-        self.coeff = Function(self.depth.function_space()).project(self.coeff)
-        self.ceq = Function(self.depth.function_space()).project(self.ceq)
+    def set_source_tracer(self, fs, solver_obj = None, init = False, t_old = Constant(100), tracer = None):
         if init:
-            self.testtracer = Function(self.depth.function_space()).project(self.testtracer)
-            self.source = Function(self.depth.function_space()).project(-(self.settling_velocity*self.coeff*self.testtracer/self.depth)+ (self.settling_velocity*self.ceq/self.depth))
+            if t_old.dat.data[:] == 0.0:
+                self.source = Function(fs).project(-(self.settling_velocity*self.coeff*self.tracer_init_value/self.depth)+ (self.settling_velocity*self.ceq/self.depth))
+            else:
+                self.source = Function(fs).project(-(self.settling_velocity*self.coeff*tracer/self.depth)+ (self.settling_velocity*self.ceq/self.depth))
         else:
-            self.source = Function(self.depth.function_space()).project(-(self.settling_velocity*self.coeff*solver_obj.fields.tracer_2d/self.depth)+ (self.settling_velocity*self.ceq/self.depth))
-                        
+
+            self.source.interpolate(-(self.settling_velocity*self.coeff*solver_obj.fields.tracer_2d/self.depth)+(self.settling_velocity*self.ceq/self.depth))
         return self.source
+
 
     def get_cfactor(self):
         try:
             assert hasattr(self, 'depth')
         except AssertionError:
             raise ValueError("Depth is undefined.")
-
         self.ksp = Constant(3*self.average_size)
-        hc = conditional(self.depth > 0.001, self.depth, 0.001)
-        aux = max_value(11.036*hc/self.ksp, 1.001)
-        return 2*(0.4**2)/(ln(aux)**2)
+        self.hclip = Function(self.P1DG).interpolate(conditional(self.ksp > self.depth, self.ksp, self.depth))
+        return Function(self.P1DG).interpolate(conditional(self.depth>self.ksp, 2*((2.5*ln(11.036*self.hclip/self.ksp))**(-2)), Constant(0.0)))
 
     def set_manning_drag_coefficient(self, fs):
         if self.friction == 'manning':
@@ -203,31 +208,24 @@ class BalzanoOptions(MorphOptions):
 
 
         def update_forcings(t):
-            self.uv1, self.eta = solver_obj.fields.solution_2d.split()
-            self.u_cg.project(self.uv1)
-            self.elev_cg.project(self.eta)
-            bathymetry_displacement =   solver_obj.eq_sw.bathymetry_displacement_mass_term.wd_bathymetry_displacement
-            
-            # Update depth
-            if self.wetting_and_drying:
-                self.depth.project(self.eta + bathymetry_displacement(self.eta) + self.bathymetry)
-            else:
-                self.depth.project(self.eta + self.bathymetry)
+            self.update_key_hydro(solver_obj)
+
+            if self.t_old.dat.data[:] == t:
+                self.update_suspended(solver_obj)
+                self.update_bedload(solver_obj)
                 
-            self.update_boundary_conditions(t=t)
-            self.qfc.interpolate(self.get_cfactor())
+                solve(self.f==0, self.z_n1)
+        
+                self.bathymetry.assign(self.z_n1)
+                solver_obj.fields.bathymetry_2d.assign(self.z_n1)              
             
-            # calculate skin friction coefficient
-            self.hclip.interpolate(conditional(self.ksp > self.depth, self.ksp, self.depth))
-            self.cfactor.interpolate(conditional(self.depth > self.ksp, 2*((2.5*ln(11.036*self.hclip/self.ksp))**(-2)), Constant(0.0)))
-            
-            self.update_suspended(solver_obj)
+            self.t_old.assign(t)      
 
 
         return update_forcings
 
     def get_export_func(self, solver_obj):
-        bathymetry_displacement = solver_obj.eq_sw.bathymetry_displacement_mass_term.wd_bathymetry_displacement
+        bathymetry_displacement = solver_obj.depth.wd_bathymetry_displacement
         eta = solver_obj.fields.elev_2d
         b = solver_obj.fields.bathymetry_2d
         def export_func():

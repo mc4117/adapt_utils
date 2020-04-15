@@ -63,7 +63,7 @@ class MorphOptions(ShallowWaterOptions):
 
         self.hc = conditional(self.depth > 0.001, self.depth, 0.001)
         self.aux = conditional(11.036*self.hc/self.ks > 1.001, 11.036*self.hc/self.ks, 1.001)
-        self.qfc = 2/(ln(self.aux)/0.4)**2
+        self.qfc = interpolate(2/(ln(self.aux)/0.4)**2, P1DG)
         
         self.TOB = project(1000*0.5*self.qfc*self.unorm, P1)
         
@@ -190,7 +190,7 @@ class MorphOptions(ShallowWaterOptions):
             
         # Update depth
         if self.wetting_and_drying:
-            bathymetry_displacement =   solver_obj.eq_sw.bathymetry_displacement_mass_term.wd_bathymetry_displacement
+            bathymetry_displacement =   solver_obj.depth.wd_bathymetry_displacement
             self.depth.interpolate(self.elev_cg + bathymetry_displacement(self.eta) + self.bathymetry)
         else:
             self.depth.interpolate(self.elev_cg + self.bathymetry)
@@ -198,12 +198,13 @@ class MorphOptions(ShallowWaterOptions):
             
         self.hc = conditional(self.depth > 0.001, self.depth, 0.001)
         self.aux = conditional(11.036*self.hc/self.ks > 1.001, 11.036*self.hc/self.ks, 1.001)
-        self.qfc = interpolate(2/(ln(self.aux)/0.4)**2
+        self.qfc = interpolate(2/(ln(self.aux)/0.4)**2, self.P1DG)
         
         # calculate skin friction coefficient
         self.cfactor.interpolate(self.get_cfactor())
 
-        self.quadratic_drag_coefficient.project(self.get_cfactor())        
+        if self.friction == 'nikuradse':
+            self.quadratic_drag_coefficient.project(self.get_cfactor())        
         
         # mu - ratio between skin friction and normal friction
         self.mu.assign(conditional(self.qfc > 0, self.cfactor/self.qfc, 0))
