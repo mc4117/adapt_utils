@@ -9,7 +9,7 @@ class MorphOptions(TsunamiOptions):
     """
     Parameter class for general morphological problems.
     """
-    
+
     def __init__(self, **kwargs):
         super(MorphOptions, self).__init__(**kwargs)    
     
