@@ -29,8 +29,6 @@ class TrenchOptions(MorphOptions):
         super(TrenchOptions, self).__init__(**kwargs)
 
         self.plot_timeseries = plot_timeseries
-
-
         self.default_mesh = RectangleMesh(np.int(16*5*nx), 5*ny, 16, 1.1)# Mesh("trench.msh")
         self.P1DG = FunctionSpace(self.default_mesh, "DG", 1)  # FIXME
         self.P1 = FunctionSpace(self.default_mesh, "CG", 1)
@@ -162,7 +160,10 @@ class TrenchOptions(MorphOptions):
 
     def set_manning_drag_coefficient(self, fs):
         if self.friction == 'manning':
-            self.manning_drag_coefficient = Constant(self.friction_coeff or 0.02)
+            if hasattr(self, 'friction_coeff'):
+                self.manning_drag_coefficient = Constant(self.friction_coeff)
+            else:
+                self.manning_drag_coefficient = Constant(0.02)
         return self.manning_drag_coefficient
 
     def set_bathymetry(self, fs, **kwargs):
