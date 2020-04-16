@@ -48,9 +48,8 @@ class TrenchOptions(MorphOptions):
                 
         self.gravity = Constant(9.81)
         
-        self.solve_tracer = False
         self.wetting_and_drying = False
-        #self.wetting_and_drying_alpha = Constant(0.43)
+        
         try:
             assert friction in ('nikuradse', 'manning')
         except AssertionError:
@@ -137,11 +136,29 @@ class TrenchOptions(MorphOptions):
             if t_old.dat.data[:] == 0.0:
                 self.source = Function(fs).project(-(self.settling_velocity*self.coeff*self.tracer_init_value/self.depth)+ (self.settling_velocity*self.ceq/self.depth))
             else:
-                self.source = Function(fs).project(-(self.settling_velocity*self.coeff*tracer/self.depth)+ (self.settling_velocity*self.ceq/self.depth))
+                if self.conservative:
+                    if self.depth_integrated:
+                        self.depth_int_sink = Function(fs).interpolate(self.settling_velocity*self.coeff/self.depth)
+                        self.depth_int_source = Function(fs).interpolate(self.settling_velocity*self.ceq)
+                    else:
+                        self.sink = Function(fs).interpolate(self.settling_velocity*self.coeff/(self.depth**2))
+                        self.source = Function(fs).interpolate(self.settling_velocity*self.ceq/self.depth)
+                else:
+                    self.sink = th.Function(fs).interpolate(self.settling_velocity*self.coeff/self.depth)
+                    self.source = th.Function(fs).interpolate(self.settling_velocity*self.ceq/self.depth)
         else:
-
-            self.source.interpolate(-(self.settling_velocity*self.coeff*solver_obj.fields.tracer_2d/self.depth)+(self.settling_velocity*self.ceq/self.depth))
-        return self.source
+            if self.conservative:
+                if self.depth_integrated:
+                    self.depth_int_sink.interpolate(self.settling_velocity*self.coeff/self.depth)
+                    self.depth_int_source.interpolate(self.settling_velocity*self.ceq)
+                else:
+                    self.sink.interpolate(self.settling_velocity*self.coeff/(self.depth**2))
+                    self.source.interpolate(self.settling_velocity*self.ceq/self.depth)
+            else:
+                self.sink.interpolate(self.settling_velocity*self.coeff/self.depth)
+                self.source.interpolate(self.settling_velocity*self.ceq/self.depth)            
+        if self.depth_integrated:
+            return self.source, 
 
     
     def set_quadratic_drag_coefficient(self, fs):
@@ -155,7 +172,7 @@ class TrenchOptions(MorphOptions):
         except AssertionError:
             raise ValueError("Depth is undefined.")
         self.ksp = Constant(3*self.average_size)
-        hclip = Function(self.P1DG).interpolate(conditional(self.ksp > self.depth, self.ksp, self.depth))
+        hclip = conditional(self.ksp > self.depth, self.ksp, self.depth)
         return Function(self.P1DG).interpolate(conditional(self.depth>self.ksp, 2*((2.5*ln(11.036*hclip/self.ksp))**(-2)), Constant(0.0)))
 
     def set_manning_drag_coefficient(self, fs):
