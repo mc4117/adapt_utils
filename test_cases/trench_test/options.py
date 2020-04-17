@@ -131,34 +131,15 @@ class TrenchOptions(MorphOptions):
         self.bath_file = File(os.path.join(self.di, 'bath_export.pvd'))        
         
 
-    def set_source_tracer(self, fs, solver_obj = None, init = False, t_old = Constant(100), tracer = None):
+    def set_source_tracer(self, fs, solver_obj = None, init = False):
         if init:
-            if t_old.dat.data[:] == 0.0:
-                self.source = Function(fs).project(-(self.settling_velocity*self.coeff*self.tracer_init_value/self.depth)+ (self.settling_velocity*self.ceq/self.depth))
-            else:
-                if self.conservative:
-                    if self.depth_integrated:
-                        self.depth_int_sink = Function(fs).interpolate(self.settling_velocity*self.coeff/self.depth)
-                        self.depth_int_source = Function(fs).interpolate(self.settling_velocity*self.ceq)
-                    else:
-                        self.sink = Function(fs).interpolate(self.settling_velocity*self.coeff/(self.depth**2))
-                        self.source = Function(fs).interpolate(self.settling_velocity*self.ceq/self.depth)
-                else:
-                    self.sink = th.Function(fs).interpolate(self.settling_velocity*self.coeff/self.depth)
-                    self.source = th.Function(fs).interpolate(self.settling_velocity*self.ceq/self.depth)
+            self.depo = Function(fs).project(self.settling_velocity * self.coeff)
+            self.ero = Function(fs).project(self.settling_velocity * self.ceq)
         else:
-            if self.conservative:
-                if self.depth_integrated:
-                    self.depth_int_sink.interpolate(self.settling_velocity*self.coeff/self.depth)
-                    self.depth_int_source.interpolate(self.settling_velocity*self.ceq)
-                else:
-                    self.sink.interpolate(self.settling_velocity*self.coeff/(self.depth**2))
-                    self.source.interpolate(self.settling_velocity*self.ceq/self.depth)
-            else:
-                self.sink.interpolate(self.settling_velocity*self.coeff/self.depth)
-                self.source.interpolate(self.settling_velocity*self.ceq/self.depth)            
-        if self.depth_integrated:
-            return self.source, 
+            self.depo.interpolate(self.settling_velocity * self.coeff)
+            self.ero.interpolate(self.settling_velocity * self.ceq)
+        
+        return self.depo, self.ero
 
     
     def set_quadratic_drag_coefficient(self, fs):
