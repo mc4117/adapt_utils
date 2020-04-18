@@ -93,6 +93,7 @@ class TrenchOptions(MorphOptions):
         
         self.convective_vel_flag = True
         self.conservative = True
+        self.depth_integrated = True
 
         self.t_old = Constant(0.0)        
         
