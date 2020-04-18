@@ -92,8 +92,6 @@ class TrenchOptions(MorphOptions):
         self.eta_d = Function(self.P1DG).project(self.eta_init)        
         
         self.convective_vel_flag = True
-        self.conservative = True
-        self.depth_integrated = True
 
         self.t_old = Constant(0.0)        
         
