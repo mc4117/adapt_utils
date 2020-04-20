@@ -105,9 +105,9 @@ print("L2 norm: ")
 print(np.sqrt(sum(diff_thetis)))  
 
 print("total time: ")  
-print(t2 -t1)
+print(t2-t1)
 
-f = open("output_frob_norm" + str(nx) +'_' + str(400)+ '.txt', "w+")
+f = open("output_frob_norm" + str(nx) + '_' + str(400) + '.txt', "w+")
 f.write(str(np.sqrt(sum(diff_thetis))))
 f.write("\n")
 f.write(str(t2-t1))
