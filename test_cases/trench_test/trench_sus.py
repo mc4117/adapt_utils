@@ -12,6 +12,7 @@ import numpy as np
 import pandas as pd
 import pylab as plt
 
+timestep = 0.2
 
 def boundary_conditions_fn_trench(bathymetry_2d, flag, morfac=1, t_new=0, state='initial'):
     """
@@ -38,6 +39,7 @@ def boundary_conditions_fn_trench(bathymetry_2d, flag, morfac=1, t_new=0, state=
     outflow_constant = [elev_constant2]
     return swe_bnd, left_bnd_id, right_bnd_id, inflow_constant, outflow_constant, left_string, right_string
 
+t1 = time.time()
 
 # define mesh
 lx = 16
@@ -80,12 +82,13 @@ morph.export_final_state("hydrodynamics_trench_fine", uv, elev)
 
 
 solver_obj, update_forcings_tracer, diff_bathy, diff_bathy_file = morph.morphological(boundary_conditions_fn=boundary_conditions_fn_trench, morfac=100, morfac_transport=True, suspendedload=True, convectivevel=True,
-                                                                                      bedload=True, angle_correction=True, slope_eff=True, seccurrent=False, sediment_slide=False, fluc_bcs=False,
-                                                                                      mesh2d=mesh2d, bathymetry_2d=bathymetry_2d, input_dir='hydrodynamics_trench_fine', viscosity_hydro=10**(-6), ks=0.025, average_size=160 * (10**(-6)), dt=0.2, final_time=15*3600,
-                                                                                      beta_fn=1.3, surbeta2_fn=1/1.5, alpha_secc_fn=0.75, angle_fn=35, mesh_step_size=0.2)
+bedload=True, angle_correction=True, slope_eff=True, seccurrent=False, sediment_slide=False, fluc_bcs=False,
+mesh2d=mesh2d, bathymetry_2d=bathymetry_2d, input_dir='hydrodynamics_trench_fine', viscosity_hydro=10**(-6), ks=0.025, average_size=160 * (10**(-6)), dt=timestep, diffusivity = 0.15756753359379702, final_time=15*3600)
 
 # run model
 solver_obj.iterate(update_forcings=update_forcings_tracer)
+
+t2 = time.time()
 
 data = pd.read_csv('experimental_data.csv', header=None)
 plt.scatter(data[0], data[1], label='Experimental Data')
@@ -106,11 +109,17 @@ for i in range(4, len(data[0].dropna())):
 
 df = pd.concat([pd.DataFrame(datathetis, columns=['x']), pd.DataFrame(bathymetrythetis1, columns=['bath'])], axis=1)
 
-df.to_csv('bed_trench_output.csv')
+df.to_csv('fixed_output/bed_trench_output.csv')
 
-plt.plot(datathetis, bathymetrythetis1, '.', linewidth=2, label='adapted mesh')
-plt.legend()
-plt.show()
+print("Time: ")
+print(t2-t1)
 
 print("L2 norm: ")
 print(np.sqrt(sum(diff_thetis)))
+
+f = open("fixed_output/output_nx" + str(nx) + '_' + str(timestep) + '.txt', "w+")
+f.write(str(np.sqrt(sum(diff_thetis))))
+f.write("\n")
+f.write(str(t2-t1))
+f.close()
+
