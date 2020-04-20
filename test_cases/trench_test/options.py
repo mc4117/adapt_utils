@@ -63,7 +63,7 @@ class TrenchOptions(MorphOptions):
         self.num_hours = 15
 
         # Physical
-        self.base_diffusivity = 0.15
+        self.base_diffusivity = 0.15756753359379702
 
         self.porosity = Constant(0.4)
         self.ks = 0.025
