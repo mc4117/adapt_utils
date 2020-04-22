@@ -12,7 +12,7 @@ from adapt_utils.norms import local_frobenius_norm
 
 t1 = time.time()
 
-nx = 0.5
+nx = 1.0
 
 op = TrenchOptions(approach='monge_ampere',
                    plot_timeseries=False,
@@ -29,7 +29,7 @@ swp = UnsteadyShallowWaterProblem(op, levels=0)
 swp.setup_solver()
 
 
-def gradient_interface_monitor(mesh, alpha=400.0, gamma=0.0):
+def gradient_interface_monitor(mesh, alpha=10.0, gamma=0.0):
 
     """
     Monitor function focused around the steep_gradient (budd acta numerica)
@@ -106,7 +106,7 @@ print(np.sqrt(sum(diff_thetis)))
 print("total time: ")
 print(t2-t1)
 
-f = open("adapt_output/output_frob_norm" + str(nx) + '_' + str(400) + '.txt', "w+")
+f = open("adapt_output/output_frob_norm" + str(nx) + '_' + str(10) + '.txt', "w+")
 f.write(str(np.sqrt(sum(diff_thetis))))
 f.write("\n")
 f.write(str(t2-t1))

@@ -134,7 +134,7 @@ def hydrodynamics_only(boundary_conditions_fn, mesh2d, bathymetry_2d, uv_init, e
 
 def morphological(boundary_conditions_fn, morfac, morfac_transport, suspendedload, convectivevel, bedload, angle_correction, slope_eff, seccurrent, sediment_slide,
                   mesh2d, bathymetry_2d, input_dir, viscosity_hydro, ks, average_size, dt, final_time,
-                  beta_fn, surbeta2_fn, alpha_secc_fn, angle_fn, mesh_step_size, friction='nikuradse', friction_coef=0, d90=0, fluc_bcs=False, bed_form='meyer', sus_form='vanrijn', diffusivity=0.15):
+                  beta_fn = 1.3, surbeta2_fn = 1/1.5, alpha_secc_fn = 0.75, angle_fn = 35, mesh_step_size = 0.2, friction='nikuradse', friction_coef=0, d90=0, fluc_bcs=False, bed_form='meyer', sus_form='vanrijn', diffusivity=0.15):
     """
     Set up a full morphological model simulation using as an initial condition the results of a hydrodynamic only model.
     Inputs:

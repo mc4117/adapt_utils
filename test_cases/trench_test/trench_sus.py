@@ -11,6 +11,7 @@ import morphological_hydro_fns as morph
 import numpy as np
 import pandas as pd
 import pylab as plt
+import time
 
 timestep = 0.2
 
@@ -44,7 +45,7 @@ t1 = time.time()
 # define mesh
 lx = 16
 ly = 1.1
-nx = lx*10  # this has to be at least double the lx as otherwise don't get trench with right gradient
+nx = lx*5  # this has to be at least double the lx as otherwise don't get trench with right gradient
 ny = 5
 mesh2d = th.RectangleMesh(nx, ny, lx, ly)
 
@@ -77,18 +78,23 @@ solver_obj.iterate(update_forcings = update_forcings_hydrodynamics)
 
 
 uv, elev = solver_obj.fields.solution_2d.split()
-morph.export_final_state("hydrodynamics_trench_fine", uv, elev)
-"""
+morph.export_final_state("hydrodynamics_trench_coarse", uv, elev)
 
+"""
 
 solver_obj, update_forcings_tracer, diff_bathy, diff_bathy_file = morph.morphological(boundary_conditions_fn=boundary_conditions_fn_trench, morfac=100, morfac_transport=True, suspendedload=True, convectivevel=True,
 bedload=True, angle_correction=True, slope_eff=True, seccurrent=False, sediment_slide=False, fluc_bcs=False,
-mesh2d=mesh2d, bathymetry_2d=bathymetry_2d, input_dir='hydrodynamics_trench_fine', viscosity_hydro=10**(-6), ks=0.025, average_size=160 * (10**(-6)), dt=timestep, diffusivity = 0.15756753359379702, final_time=15*3600)
+mesh2d=mesh2d, bathymetry_2d=bathymetry_2d, input_dir='hydrodynamics_trench_coarse', viscosity_hydro=10**(-6), ks=0.025, average_size=160 * (10**(-6)), dt=timestep, diffusivity = 0.15756753359379702, final_time=15*3600)
 
 # run model
 solver_obj.iterate(update_forcings=update_forcings_tracer)
 
 t2 = time.time()
+
+
+new_mesh = th.RectangleMesh(16*5*5, 5*1, 16, 1.1)
+
+bath = th.Function(th.FunctionSpace(new_mesh, "CG", 1)).project(solver_obj.fields.bathymetry_2d)
 
 data = pd.read_csv('experimental_data.csv', header=None)
 plt.scatter(data[0], data[1], label='Experimental Data')
@@ -96,15 +102,10 @@ plt.scatter(data[0], data[1], label='Experimental Data')
 datathetis = []
 bathymetrythetis1 = []
 diff_thetis = []
-for i in range(len(data[0].dropna()[0:3])):
+for i in range(len(data[0].dropna())):
     print(i)
     datathetis.append(data[0].dropna()[i])
-    bathymetrythetis1.append(-solver_obj.fields.bathymetry_2d.at([np.round(data[0].dropna()[i], 3), 0.55]))
-    diff_thetis.append((data[1].dropna()[i] - bathymetrythetis1[-1])**2)
-for i in range(4, len(data[0].dropna())):
-    print(i)
-    datathetis.append(data[0].dropna()[i])
-    bathymetrythetis1.append(-solver_obj.fields.bathymetry_2d.at([np.round(data[0].dropna()[i], 3), 0.55]))
+    bathymetrythetis1.append(-bath.at([np.round(data[0].dropna()[i], 3), 0.55]))
     diff_thetis.append((data[1].dropna()[i] - bathymetrythetis1[-1])**2)
 
 df = pd.concat([pd.DataFrame(datathetis, columns=['x']), pd.DataFrame(bathymetrythetis1, columns=['bath'])], axis=1)

@@ -24,7 +24,7 @@ class MorphOptions(ShallowWaterOptions):
     def set_up_suspended(self, mesh, tracer=None):
         P1 = FunctionSpace(mesh, "CG", 1)
         P1DG = FunctionSpace(mesh, "DG", 1)
-        P1_vec = FunctionSpace(mesh, "CG", 1)
+        P1_vec = VectorFunctionSpace(mesh, "CG", 1)
         P1DG_vec = VectorFunctionSpace(mesh, "DG", 1)
 
         R = Constant(2650/1000 - 1)
