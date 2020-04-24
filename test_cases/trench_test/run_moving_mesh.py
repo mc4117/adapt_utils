@@ -28,8 +28,7 @@ op = TrenchOptions(approach='monge_ampere',
 swp = UnsteadyShallowWaterProblem(op, levels=0)
 swp.setup_solver()
 
-
-def gradient_interface_monitor(mesh, alpha=10.0, gamma=0.0):
+def gradient_interface_monitor(mesh, alpha=0.0, gamma=0.0):
 
     """
     Monitor function focused around the steep_gradient (budd acta numerica)
@@ -62,14 +61,14 @@ def gradient_interface_monitor(mesh, alpha=10.0, gamma=0.0):
     tau = TestFunction(P1)
     n = FacetNormal(mesh)
 
-    mon_init = project(sqrt(1.0 + alpha * norm_two_proj), P1)
+    mon_init = project(sqrt(Constant(1.0) + alpha * norm_two_proj), P1)
 
     K = 10*(0.4**2)/4
     a = (inner(tau, H)*dx)+(K*inner(grad(tau), grad(H))*dx) - (K*(tau*inner(grad(H), n)))*ds
     a -= inner(tau, mon_init)*dx
     solve(a == 0, H)
 
-    return H
+    return mon_init
 
 
 swp.monitor_function = gradient_interface_monitor
@@ -106,7 +105,7 @@ print(np.sqrt(sum(diff_thetis)))
 print("total time: ")
 print(t2-t1)
 
-f = open("adapt_output/output_frob_norm" + str(nx) + '_' + str(10) + '.txt', "w+")
+f = open("adapt_output/output_frob_norm" + str(nx) + '_' + str(0.0) + '.txt', "w+")
 f.write(str(np.sqrt(sum(diff_thetis))))
 f.write("\n")
 f.write(str(t2-t1))

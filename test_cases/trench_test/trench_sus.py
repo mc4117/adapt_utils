@@ -40,12 +40,11 @@ def boundary_conditions_fn_trench(bathymetry_2d, flag, morfac=1, t_new=0, state=
     outflow_constant = [elev_constant2]
     return swe_bnd, left_bnd_id, right_bnd_id, inflow_constant, outflow_constant, left_string, right_string
 
-t1 = time.time()
 
 # define mesh
 lx = 16
 ly = 1.1
-nx = lx*5  # this has to be at least double the lx as otherwise don't get trench with right gradient
+nx = np.int(lx*5*0.2)  # this has to be at least double the lx as otherwise don't get trench with right gradient
 ny = 5
 mesh2d = th.RectangleMesh(nx, ny, lx, ly)
 
@@ -66,7 +65,7 @@ depth_diff = depth_trench - depth_riv
 trench = th.conditional(th.le(x, 5), depth_riv, th.conditional(th.le(x, 6.5), (1/1.5)*depth_diff*(x-6.5) + depth_trench,
                         th.conditional(th.le(x, 9.5), depth_trench, th.conditional(th.le(x, 11), -(1/1.5)*depth_diff*(x-11) + depth_riv, depth_riv))))
 bathymetry_2d.interpolate(-trench)
-"""
+
 # define initial elevation
 elev_init = th.Function(P1_2d).interpolate(th.Constant(0.4))
 uv_init = th.as_vector((0.51, 0.0))
@@ -78,13 +77,13 @@ solver_obj.iterate(update_forcings = update_forcings_hydrodynamics)
 
 
 uv, elev = solver_obj.fields.solution_2d.split()
-morph.export_final_state("hydrodynamics_trench_coarse", uv, elev)
+morph.export_final_state("hydrodynamics_trench_super_coarse", uv, elev)
 
-"""
+t1 = time.time()
 
 solver_obj, update_forcings_tracer, diff_bathy, diff_bathy_file = morph.morphological(boundary_conditions_fn=boundary_conditions_fn_trench, morfac=100, morfac_transport=True, suspendedload=True, convectivevel=True,
 bedload=True, angle_correction=True, slope_eff=True, seccurrent=False, sediment_slide=False, fluc_bcs=False,
-mesh2d=mesh2d, bathymetry_2d=bathymetry_2d, input_dir='hydrodynamics_trench_coarse', viscosity_hydro=10**(-6), ks=0.025, average_size=160 * (10**(-6)), dt=timestep, diffusivity = 0.15756753359379702, final_time=15*3600)
+mesh2d=mesh2d, bathymetry_2d=bathymetry_2d, input_dir='hydrodynamics_trench_super_coarse', viscosity_hydro=10**(-6), ks=0.025, average_size=160 * (10**(-6)), dt=timestep, diffusivity = 0.15756753359379702, final_time=15*3600)
 
 # run model
 solver_obj.iterate(update_forcings=update_forcings_tracer)
