@@ -299,7 +299,11 @@ def morphological(boundary_conditions_fn, morfac, morfac_transport, suspendedloa
                         print('Unrecognised suspended sediment transport formula. Please choose "vanrijn" or "soulsby"')
 
                     # calculate depth-averaged source term for sediment concentration equation
-                    source.interpolate(-(settling_velocity*coeff*solver_obj.fields.tracer_2d/depth) + (settling_velocity*ceq/depth))
+                    ero.interpolate(settling_velocity*ceq)
+                    depo.interpolate(settling_velocity*coeff)
+                    source.interpolate(ero/depth)
+                    sink.interpolate(depo/depth)
+
                     # update sediment rate to ensure equilibrium at inflow
                     sediment_rate.assign(ceq.at([0, 0])/coeff.at([0, 0]))
 
@@ -417,7 +421,7 @@ def morphological(boundary_conditions_fn, morfac, morfac_transport, suspendedloa
                 if suspendedload:
                     # add suspended sediment transport to exner equation multiplied by depth as the exner equation is not depth-averaged
 
-                    qbsourcedepth.interpolate(source*depth)
+                    qbsourcedepth.interpolate(-(depo*solver_obj.fields.tracer_2d)+ero)
                     f += - (qbsourcedepth*v)*fire.dx
 
                 # solve exner equation using finite element methods
@@ -552,22 +556,6 @@ def morphological(boundary_conditions_fn, morfac, morfac_transport, suspendedloa
     dzdx = th.Function(V).interpolate(old_bathymetry_2d.dx(0))
     dzdy = th.Function(V).interpolate(old_bathymetry_2d.dx(1))
 
-    if sediment_slide:
-        # add component to bedload transport to ensure the slope angle does not exceed a certain value
-
-        # calculate normal to the bed
-        nx = th.Function(V).interpolate(dzdx/th.sqrt(1 + (dzdx**2 + dzdy**2)))
-        ny = th.Function(V).interpolate(dzdy/th.sqrt(1 + (dzdx**2 + dzdy**2)))
-        nz = th.Function(V).interpolate(1/th.sqrt(1 + (dzdx**2 + dzdy**2)))
-
-        sinbeta = th.Function(V).interpolate(th.sqrt(1 - (nz**2)))
-        betaangle = th.Function(V).interpolate(th.asin(sinbeta))
-        tanbeta = th.Function(V).interpolate(sinbeta/nz)
-
-        # calculating magnitude of added component
-        qaval = th.Function(V).interpolate(th.conditional(tanbeta - tanphi > 0, (1-porosity)*0.5*(L**2)*(tanbeta - tanphi)/(th.cos(betaangle*dt*morfac)), 0))
-        # multiplying by direction
-        alphaconst = th.Function(V).interpolate(th.conditional(sinbeta > 0, - qaval*(nz**2)/sinbeta, 0))
 
     if suspendedload:
         # deposition flux - calculating coefficient to account for stronger conc at bed
@@ -601,10 +589,13 @@ def morphological(boundary_conditions_fn, morfac, morfac_transport, suspendedloa
         testtracer = th.Function(P1_2d).interpolate(ceq/coeff)
 
         # calculate depth-averaged source term for sediment concentration equation
-        source = th.Function(P1_2d).interpolate(-(settling_velocity*coeff*sediment_rate/depth) + (settling_velocity*ceq/depth))
+        ero = th.Function(P1_2d).interpolate(settling_velocity*ceq)
+        depo = th.Function(P1_2d).interpolate(settling_velocity*coeff)
+        source = th.Function(P1_2d).interpolate(ero/depth)
+        sink = th.Function(P1_2d).interpolate(depo/depth)
 
         # add suspended sediment transport to exner equation multiplied by depth as the exner equation is not depth-averaged
-        qbsourcedepth = th.Function(V).interpolate(source*depth)
+        qbsourcedepth = th.Function(V).interpolate(-depo*testtracer + ero)
 
         if convectivevel:
             # correction factor to advection velocity in sediment concentration equation
@@ -695,6 +686,7 @@ def morphological(boundary_conditions_fn, morfac, morfac_transport, suspendedloa
         options.fields_to_export = ['uv_2d', 'elev_2d', 'tracer_2d', 'bathymetry_2d']
         options.tracer_advective_velocity_factor = alphatest2
         options.tracer_source_2d = source
+        options.tracer_sink_2d = sink
     else:
         options.solve_tracer = False
         options.fields_to_export = ['uv_2d', 'elev_2d', 'bathymetry_2d']

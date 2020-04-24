@@ -13,7 +13,7 @@ import pandas as pd
 import pylab as plt
 import time
 
-timestep = 0.2
+timestep = 0.3
 
 def boundary_conditions_fn_trench(bathymetry_2d, flag, morfac=1, t_new=0, state='initial'):
     """
@@ -66,6 +66,7 @@ trench = th.conditional(th.le(x, 5), depth_riv, th.conditional(th.le(x, 6.5), (1
                         th.conditional(th.le(x, 9.5), depth_trench, th.conditional(th.le(x, 11), -(1/1.5)*depth_diff*(x-11) + depth_riv, depth_riv))))
 bathymetry_2d.interpolate(-trench)
 
+"""
 # define initial elevation
 elev_init = th.Function(P1_2d).interpolate(th.Constant(0.4))
 uv_init = th.as_vector((0.51, 0.0))
@@ -78,6 +79,7 @@ solver_obj.iterate(update_forcings = update_forcings_hydrodynamics)
 
 uv, elev = solver_obj.fields.solution_2d.split()
 morph.export_final_state("hydrodynamics_trench_super_coarse", uv, elev)
+"""
 
 t1 = time.time()
 

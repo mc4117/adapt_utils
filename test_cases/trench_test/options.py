@@ -34,6 +34,7 @@ class TrenchOptions(MorphOptions):
         self.P1_vec_dg = VectorFunctionSpace(self.default_mesh, "DG", 1)
 
         self.plot_pvd = True
+        self.implicit_source = False
 
         ts = time.time()
         st = datetime.datetime.fromtimestamp(ts).strftime('%Y-%m-%d %H:%M:%S')
