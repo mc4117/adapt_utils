@@ -28,7 +28,7 @@ op = TrenchOptions(approach='monge_ampere',
 swp = UnsteadyShallowWaterProblem(op, levels=0)
 swp.setup_solver()
 
-def gradient_interface_monitor(mesh, alpha=0.0, gamma=0.0):
+def gradient_interface_monitor(mesh, alpha=100.0, gamma=0.0):
 
     """
     Monitor function focused around the steep_gradient (budd acta numerica)
@@ -93,7 +93,7 @@ for i in range(len(data[0].dropna())):
 
 df = pd.concat([pd.DataFrame(datathetis, columns=['x']), pd.DataFrame(bathymetrythetis1, columns=['bath'])], axis=1)
 
-df.to_csv('adapt_output/bed_trench_output' + str(nx) + '.csv')
+df.to_csv('adapt_output2/bed_trench_output' + str(nx) + '.csv')
 
 plt.plot(datathetis, bathymetrythetis1, '.', linewidth=2, label='adapted mesh')
 plt.legend()
@@ -105,7 +105,7 @@ print(np.sqrt(sum(diff_thetis)))
 print("total time: ")
 print(t2-t1)
 
-f = open("adapt_output/output_frob_norm" + str(nx) + '_' + str(0.0) + '.txt', "w+")
+f = open("adapt_output2/output_frob_norm" + str(nx) + '_' + str(100.0) + '.txt', "w+")
 f.write(str(np.sqrt(sum(diff_thetis))))
 f.write("\n")
 f.write(str(t2-t1))
