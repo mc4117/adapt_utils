@@ -28,7 +28,7 @@ op = TrenchOptions(approach='monge_ampere',
 swp = UnsteadyShallowWaterProblem(op, levels=0)
 swp.setup_solver()
 
-def gradient_interface_monitor(mesh, alpha=0.0, gamma=0.0):
+def gradient_interface_monitor(mesh, alpha=20.0, gamma=0.0):
 
     """
     Monitor function focused around the steep_gradient (budd acta numerica)
