@@ -1,15 +1,18 @@
 from firedrake import *
 
+import numpy as np
+
 from adapt_utils.options import Options
 from adapt_utils.adapt.recovery import construct_hessian, construct_boundary_hessian
 from adapt_utils.adapt.kernels import *
 
 
 __all__ = ["steady_metric", "isotropic_metric", "metric_with_boundary", "metric_intersection",
-           "metric_relaxation", "metric_complexity", "combine_metrics"]
+           "metric_relaxation", "metric_complexity", "combine_metrics", "time_normalise",
+           "metric_average"]
 
 
-def steady_metric(f=None, H=None, mesh=None, noscale=False, degree=1, op=Options()):
+def steady_metric(f=None, H=None, projector=None, noscale=False, op=Options()):
     r"""
     Computes the steady metric for mesh adaptation. Based on Nicolas Barral's function
     ``computeSteadyMetric``, from ``adapt.py``, 2016.
@@ -18,19 +21,18 @@ def steady_metric(f=None, H=None, mesh=None, noscale=False, degree=1, op=Options
 
     :kwarg f: Field to compute the Hessian of.
     :kwarg H: Reconstructed Hessian associated with `f` (if already computed).
+    :kwarg projector: :class:`DoubleL2Projector` object to compute Hessian.
     :kwarg noscale: If `noscale == True` then we simply take the Hessian with eigenvalues in modulus.
-    :kwarg degree: polynomial degree of Hessian.
     :kwarg op: `Options` class object providing min/max cell size values.
     :return: Steady metric associated with Hessian `H`.
     """
     if f is None:
         try:
-            assert not H is None
+            assert H is not None
         except AssertionError:
             raise ValueError("Please supply either field for recovery, or Hessian thereof.")
     elif H is None:
-        mesh = mesh or f.function_space().mesh()
-        H = construct_hessian(f, mesh=mesh, degree=degree, op=op)
+        H = construct_hessian(f, op=op) if projector is None else projector.project(f)
     V = H.function_space()
     mesh = V.mesh()
     dim = mesh.topological_dimension()
@@ -63,18 +65,18 @@ def steady_metric(f=None, H=None, mesh=None, noscale=False, degree=1, op=Options
 
     return M
 
-def isotropic_metric(f, noscale=False, degree=1, op=Options()):
+
+def isotropic_metric(f, noscale=False, op=Options()):
     r"""
     Given a scalar error indicator field `f`, construct an associated isotropic metric field.
 
     :arg f: Function to adapt to.
     :kwarg noscale: If `noscale == True` then we simply take the diagonal matrix with `f` in modulus.
-    :kwarg degree: polynomial degree of Hessian.
-    :kwarg op: `Options` class providing min/max cell size values.
+    :kwarg op: :class:`Options` object providing min/max cell size values.
     :return: Isotropic metric corresponding to `f`.
     """
     try:
-        assert not f is None
+        assert f is not None
         assert len(f.ufl_element().value_shape()) == 0
     except AssertionError:
         raise ValueError("Provide a scalar function to compute an isotropic metric w.r.t.")
@@ -111,49 +113,68 @@ def isotropic_metric(f, noscale=False, degree=1, op=Options()):
 
     return interpolate(M_diag*Identity(dim), V_ten)
 
-def metric_intersection(M1, M2, bdy=None):
+
+def metric_intersection(*metrics, bdy=None):
     r"""
     Intersect a metric field, i.e. intersect (globally) over all local metrics.
 
-    :arg M1: first metric to be intersected.
-    :arg M2: second metric to be intersected.
+    :arg metrics: metrics to be intersected.
     :param bdy: specify domain boundary to intersect over.
     :return: intersection of metrics M1 and M2.
     """
+    n = len(metrics)
+    assert n > 0
+    M = metrics[0]
+    for i in range(1, n):
+        M = _metric_intersection_pair(M, metrics[i], bdy=bdy)
+    return M
+
+
+def _metric_intersection_pair(M1, M2, bdy=None):
+    if bdy is not None:
+        raise NotImplementedError  # FIXME: boundary intersection below does not work
     V = M1.function_space()
-    mesh = V.mesh()
-    dim = mesh.topological_dimension()
+    node_set = V.boundary_nodes(bdy, 'topological') if bdy is not None else V.node_set
+    dim = V.mesh().topological_dimension()
     assert dim in (2, 3)
     assert V == M2.function_space()
-    M12 = M1.copy()
-    # FIXME: boundary intersection does not work
-    node_set = V.boundary_nodes(bdy, 'topological') if bdy is not None else V.node_set
+    M12 = M1.copy(deepcopy=True)
     kernel = eigen_kernel(intersect, dim)
     op2.par_loop(kernel, node_set, M12.dat(op2.RW), M1.dat(op2.READ), M2.dat(op2.READ))
     return M12
 
-def metric_relaxation(M1, M2, alpha=0.5):
+
+def metric_relaxation(*metrics, weights):
     r"""
     As an alternative to intersection, pointwise metric information may be combined using a convex
     combination. Whilst this method does not have as clear an interpretation as metric intersection,
     it has the benefit that the combination may be weighted towards one of the metrics in question.
 
-    :arg M1: first metric to be combined.
-    :arg M2: second metric to be combined.
-    :param alpha: scalar parameter in [0,1].
-    :return: convex combination of metrics M1 and M2 with parameter alpha.
+    :arg metrics: metrics to be combined
+    :kwarg weights: weights with which to average
+    :return: convex combination
     """
-    V = M1.function_space()
-    assert V == M2.function_space()
+    n = len(metrics)
+    assert n > 0
+    if weights is None:
+        weights = np.ones(n)/n
+    else:
+        assert len(weights) == n
+    V = metrics[0].function_space()
     M = Function(V)
-    M += alpha*M1 + (1-alpha)*M2
+    for i, Mi in enumerate(metrics):
+        assert Mi.function_space() == V
+        M += Mi*weights[i]
     return M
 
-def combine_metrics(M1, M2, average=True):
-    if average:
-        return metric_relaxation(M1, M2)
-    else:
-        return metric_intersection(M1, M2)
+
+def metric_average(*metrics):
+    return metric_relaxation(*metrics, None)
+
+
+def combine_metrics(*metrics, average=True):
+    return metric_average(*metrics) if average else metric_intersection(*metrics)
+
 
 def metric_complexity(M):
     r"""
@@ -161,6 +182,90 @@ def metric_complexity(M):
     based thereupon.
     """
     return assemble(sqrt(det(M))*dx)
+
+
+def time_normalise(hessians, timesteps_per_remesh=None, op=Options()):
+    r"""
+    Normalise a list of Hessians in time as dictated by equation (1) in [Barral et al. 2016].
+
+    :arg hessians: list of Hessians to be time-normalised.
+    :kwarg timesteps_per_remesh: list of time integrals of 1/timestep over each remesh step.
+        For constant timesteps, this equates to the number of timesteps per remesh step.
+    :kwarg op: :class:`Options` object providing desired average instantaneous metric complexity.
+    """
+    target = op.target*op.end_time  # Desired space-time complexity
+    p = op.norm_order
+    n = len(hessians)
+    if timesteps_per_remesh is None:
+        timesteps_per_remesh = np.ones(n)*op.dt_per_remesh
+    else:
+        assert len(timesteps_per_remesh) == n
+        assert n > 0
+    d = hessians[0].function_space().mesh().topological_dimension()
+    z = zip(hessians, timesteps_per_remesh)
+
+    # Compute global normalisation coefficient
+    global_norm = pow(sum(assemble(pow(det(H)*tpr**2, p/(2*p + d))*dx) for H, tpr in z), -2/d)
+    op.print_debug("Global normalisation factor: {:.4e}".format(global_norm))
+
+    # Normalise on each window
+    for H, tpr in z:
+        H.interpolate(pow(target, 2/d)*global_norm*pow(det(H)*tpr**2, -1/(2*p + d))*H)
+        H.rename("Time-accurate {:s}".format(H.dat.name))
+
+
+# TODO: Test identities hold
+def get_density_and_quotients(M):
+    r"""
+    Since metric fields are symmetric, they admit an orthogonal eigendecomposition,
+
+  ..math::
+        M(x) = V(x) \Lambda(x) V(x)^T,
+
+    where :math:`V` and :math:`\Sigma` are matrices holding the eigenvectors and eigenvalues,
+    respectively. Since metric fields are positive definite, we know :math:`\Lambda` is positive.
+
+    The eigenvectors can be interpreted as defining the principal directions. The eigenvalue matrix
+    can be decomposed further to give two meaningful fields: the metric density :math:`d` and
+    anisotropic quotients, encapsulated by the diagonal matrix :math:`R`. These give rise to the
+    decomposition
+
+  ..math::
+        M(x) = d(x)^\frac23 V(x) R(x)^{-\frac23} V(x)^T
+
+    and are given by
+
+  ..math::
+        d = \sum_{i=1}^n h_i,\quad r_i = h_i^3/d,\quad \forall i=1:n,
+
+    where :math:`h_i := \frac1{\sqrt{\lambda_i}}`.
+    """
+    fs_ten = M.function_space()
+    mesh = fs_ten.mesh()
+    fs_vec = VectorFunctionSpace(mesh, fs_ten.ufl_element())
+    fs = FunctionSpace(mesh, fs_ten.ufl_element())
+    dim = mesh.topological_dimension()
+
+    # Setup fields
+    V = Function(fs_ten, name="Eigenvectors")
+    Λ = Function(fs_vec, name="Eigenvalues")
+    h = Function(fs_vec, name="Sizes")
+    density = Function(fs, name="Metric density")
+    quotients = Function(fs_vec, name="Anisotropic quotients")
+
+    # Compute eigendecomposition
+    kernel = eigen_kernel(get_eigendecomposition, dim)
+    op2.par_loop(kernel, fs_ten.node_set, V.dat(op2.RW), Λ.dat(op2.RW), M.dat(op2.READ))
+
+    # Extract density and quotients
+    h.interpolate(as_vector([1/sqrt(Λ[i]) for i in range(dim)]))
+    d = Constant(1.0)
+    for i in range(dim):
+        d = d/h[i]
+    density.interpolate(d)
+    quotients.interpolate(as_vector([h[i]**3/d for i in range(dim)]))
+    return density, quotients
+
 
 def get_metric_coefficient(a, b, op=Options()):
     r"""
@@ -179,6 +284,7 @@ def get_metric_coefficient(a, b, op=Options()):
     sol = solve(a*pow(c, -0.6) + b*pow(c, -0.5) - op.target, c)
     assert len(sol) == 1
     return Constant(sol[0])
+
 
 # TODO: test
 def metric_with_boundary(f=None, H=None, h=None, mesh=None, degree=1, op=Options()):
@@ -202,9 +308,9 @@ def metric_with_boundary(f=None, H=None, h=None, mesh=None, degree=1, op=Options
             raise ValueError("Please supply either field for recovery, or Hessians thereof.")
     else:
         mesh = mesh or f.function_space().mesh()
-        H = H or construct_hessian(f, mesh=mesh, degree=degree, op=op)
+        H = H or construct_hessian(f, op=op)
         if h is None:
-            h = construct_boundary_hessian(f, mesh=mesh, degree=degree, op=op)
+            h = construct_boundary_hessian(f, op=op)
             h.interpolate(abs(h))
     V = h.function_space()
     V_ten = H.function_space()

@@ -22,6 +22,7 @@ class Options(FrozenConfigurable):
     end_time = PositiveFloat(60., help="End of time window of interest.").tag(config=True)
     dt_per_export = PositiveFloat(10, help="Number of timesteps per export.").tag(config=True)
     dt_per_remesh = PositiveFloat(20, help="Number of timesteps per mesh adaptation.").tag(config=True)
+    use_automatic_timestep = Bool(False).tag(config=True)
 
     # Boundary conditions
     boundary_conditions = PETScSolverParameters({}, help="Boundary conditions expressed as a dictionary.").tag(config=True)
@@ -162,7 +163,7 @@ class Options(FrozenConfigurable):
             else:
                 r1 = r0
             expr1 = (x-x0)*(x-x0) + (y-y0)*(y-y0)
-            expr2 = scale*exp(1 -1/(1 - (x-x0)*(x-x0)/r0**2))*exp(1 - 1/(1 - (y-y0)*(y-y0)/r1**2))
+            expr2 = scale*exp(1 - 1/(1 - (x-x0)*(x-x0)/r0**2))*exp(1 - 1/(1 - (y-y0)*(y-y0)/r1**2))
             vol = r0*r1
             if dim == 3:
                 z0 = locs[j][2]
@@ -318,7 +319,7 @@ class Options(FrozenConfigurable):
                 trial, test = TrialFunction(coord_space), TestFunction(coord_space)
                 a = dot(test, trial)*dx
                 L = dot(test, self.fluid_velocity)*dx
-                    
+
                 if self.prescribed_velocity_bc == 'noslip':
 
                     # Enforce no boundary movement

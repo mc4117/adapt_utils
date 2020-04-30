@@ -20,6 +20,10 @@ op = TrenchOptions(approach='monge_ampere',
                    debug=False,
                    nonlinear_method='relaxation',
                    num_adapt=1,
+<<<<<<< HEAD
+=======
+                   qoi_mode='inundation_volume',
+>>>>>>> 48674e144ae442cdc3b36888a0cfe0aba1d3e9d2
                    friction='nikuradse',
                    nx=nx,
                    ny=1,
@@ -28,7 +32,12 @@ op = TrenchOptions(approach='monge_ampere',
 swp = UnsteadyShallowWaterProblem(op, levels=0)
 swp.setup_solver()
 
+<<<<<<< HEAD
 def gradient_interface_monitor(mesh, alpha=20.0, gamma=0.0):
+=======
+
+def gradient_interface_monitor(mesh, alpha=400.0, gamma=0.0):
+>>>>>>> 48674e144ae442cdc3b36888a0cfe0aba1d3e9d2
 
     """
     Monitor function focused around the steep_gradient (budd acta numerica)
@@ -61,14 +70,23 @@ def gradient_interface_monitor(mesh, alpha=20.0, gamma=0.0):
     tau = TestFunction(P1)
     n = FacetNormal(mesh)
 
+<<<<<<< HEAD
     mon_init = project(sqrt(Constant(1.0) + alpha * norm_two_proj), P1)
+=======
+    mon_init = project(sqrt(1.0 + alpha * norm_two_proj), P1)
+>>>>>>> 48674e144ae442cdc3b36888a0cfe0aba1d3e9d2
 
     K = 10*(0.4**2)/4
     a = (inner(tau, H)*dx)+(K*inner(grad(tau), grad(H))*dx) - (K*(tau*inner(grad(H), n)))*ds
     a -= inner(tau, mon_init)*dx
     solve(a == 0, H)
 
+<<<<<<< HEAD
     return mon_init
+
+=======
+    return H
+>>>>>>> 48674e144ae442cdc3b36888a0cfe0aba1d3e9d2
 
 
 swp.monitor_function = gradient_interface_monitor
@@ -105,7 +123,11 @@ print(np.sqrt(sum(diff_thetis)))
 print("total time: ")
 print(t2-t1)
 
+<<<<<<< HEAD
 f = open("adapt_output2/output_frob_norm" + str(nx) + '_' + str(100.0) + '.txt', "w+")
+=======
+f = open("output_frob_norm" + str(nx) + '_' + str(400) + '.txt', "w+")
+>>>>>>> 48674e144ae442cdc3b36888a0cfe0aba1d3e9d2
 f.write(str(np.sqrt(sum(diff_thetis))))
 f.write("\n")
 f.write(str(t2-t1))

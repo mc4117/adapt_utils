@@ -17,8 +17,8 @@ class ShallowWaterOptions(Options):
     bathymetry = FiredrakeScalarExpression(None, allow_none=True).tag(config=True)
     base_viscosity = NonNegativeFloat(0.0).tag(config=True)
     base_diffusivity = NonNegativeFloat(0.0).tag(config=True)
-    viscosity = FiredrakeScalarExpression(Constant(0.0)).tag(config=True)
-    diffusivity = FiredrakeScalarExpression(Constant(0.0)).tag(config=True)
+    viscosity = FiredrakeScalarExpression(None, allow_none=True).tag(config=True)
+    diffusivity = FiredrakeScalarExpression(None, allow_none=True).tag(config=True)
     quadratic_drag_coefficient = FiredrakeScalarExpression(None, allow_none=True).tag(config=True)
     manning_drag_coefficient = FiredrakeScalarExpression(None, allow_none=True).tag(config=True)
     inflow = FiredrakeVectorExpression(None, allow_none=True).tag(config=True)
@@ -32,7 +32,7 @@ class ShallowWaterOptions(Options):
     grad_depth_viscosity = Bool(False).tag(config=True)
     family = Enum(['dg-dg', 'rt-dg', 'dg-cg', 'taylor-hood'], default_value='dg-dg').tag(config=True)
     wetting_and_drying = Bool(False).tag(config=True)
-    wetting_and_drying_alpha = FiredrakeScalarExpression(Constant(0.0)).tag(config=True)
+    wetting_and_drying_alpha = FiredrakeScalarExpression(Constant(4.3)).tag(config=True)
 
     # Adaptation
     adapt_field = Unicode('all_avg', help="Adaptation field of interest.").tag(config=True)
@@ -41,6 +41,7 @@ class ShallowWaterOptions(Options):
     def __init__(self, **kwargs):
         super(ShallowWaterOptions, self).__init__(**kwargs)
         self.degree_increase = 0
+        self.timestepper = 'CrankNicolson'
         self.stabilisation = 'lax_friedrichs'
         self.stabilisation_parameter = Constant(1.0)
 
@@ -49,7 +50,10 @@ class ShallowWaterOptions(Options):
 
     def set_viscosity(self, fs):
         """Should be implemented in derived class."""
-        self.viscosity = Constant(self.base_viscosity)
+        if np.allclose(self.base_viscosity, 0.0):
+            self.viscosity = None
+        else:
+            self.viscosity = Constant(self.base_viscosity)
         return self.viscosity
 
     def set_source_tracer(self, fs, solver_obj):
@@ -58,7 +62,10 @@ class ShallowWaterOptions(Options):
 
     def set_diffusivity(self, fs):
         """Should be implemented in derived class."""
-        self.diffusivity = Constant(self.base_diffusivity)
+        if np.allclose(self.base_diffusivity, 0.0):
+            self.diffusivity = None
+        else:
+            self.diffusivity = Constant(self.base_diffusivity)
         return self.diffusivity
 
     def set_inflow(self, fs):
@@ -77,17 +84,36 @@ class ShallowWaterOptions(Options):
         """Should be implemented in derived class."""
         pass
 
-    def get_initial_depth(self, fs):
-        """Compute the initial total water depth, using the bathymetry and initial elevation."""
-        if self.bathymetry is None:
-            self.set_bathymetry(fs.sub(1))
-        if not hasattr(self, 'initial_value'):
-            self.set_initial_condition(fs)
-        eta = self.initial_value.split()[1]
-        self.depth = interpolate(self.bathymetry + eta, eta.function_space())
-        return self.depth
-
     def set_boundary_surface(self):
         """Set the initial displacement of the boundary elevation."""
         self.elev_in = Constant(0.0)
         self.elev_out = Constant(0.0)
+
+    def get_eta_tilde(self, solver_obj):
+        bathymetry_displacement = solver_obj.eq_sw.depth.wd_bathymetry_displacement
+        eta = solver_obj.fields.elev_2d
+        self.eta_tilde.project(eta + bathymetry_displacement(eta))
+
+    def get_export_func(self, solver_obj):
+        def export_func():
+            if self.wetting_and_drying:
+                self.get_eta_tilde(solver_obj)
+                self.eta_tilde_file.write(self.eta_tilde)
+        return export_func
+
+    def get_initial_depth(self, fs):
+        """Compute the initial total water depth, using the bathymetry and initial elevation."""
+        if not hasattr(self, 'initial_value'):
+            self.set_initial_condition(fs)
+        eta = self.initial_value.split()[1]
+        V = FunctionSpace(eta.function_space().mesh(), 'CG', 1)
+        eta_cg = Function(V).project(eta)
+        if self.bathymetry is None:
+            self.set_bathymetry(V)
+        if self.wetting_and_drying:
+            bathymetry_displacement = self.wd_dispacement_mc(eta)
+            self.depth = interpolate(self.bathymetry + bathymetry_displacement + eta_cg, V)
+        else:
+            self.depth = interpolate(self.bathymetry + eta_cg, V)
+
+        return self.depth

@@ -13,7 +13,10 @@ import pandas as pd
 import pylab as plt
 import time
 
+<<<<<<< HEAD
 timestep = 0.1
+=======
+>>>>>>> 48674e144ae442cdc3b36888a0cfe0aba1d3e9d2
 
 def boundary_conditions_fn_trench(bathymetry_2d, flag, morfac=1, t_new=0, state='initial'):
     """
@@ -44,7 +47,11 @@ def boundary_conditions_fn_trench(bathymetry_2d, flag, morfac=1, t_new=0, state=
 # define mesh
 lx = 16
 ly = 1.1
+<<<<<<< HEAD
 nx = np.int(lx*5*4.0)  # this has to be at least double the lx as otherwise don't get trench with right gradient
+=======
+nx = lx*10  # this has to be at least double the lx as otherwise don't get trench with right gradient
+>>>>>>> 48674e144ae442cdc3b36888a0cfe0aba1d3e9d2
 ny = 5
 mesh2d = th.RectangleMesh(nx, ny, lx, ly)
 
@@ -78,6 +85,7 @@ solver_obj.iterate(update_forcings = update_forcings_hydrodynamics)
 
 
 uv, elev = solver_obj.fields.solution_2d.split()
+<<<<<<< HEAD
 morph.export_final_state("hydrodynamics_trench_super_fine", uv, elev)
 
 
@@ -86,10 +94,21 @@ t1 = time.time()
 solver_obj, update_forcings_tracer, diff_bathy, diff_bathy_file = morph.morphological(boundary_conditions_fn=boundary_conditions_fn_trench, morfac=100, morfac_transport=True, suspendedload=True, convectivevel=True,
 bedload=True, angle_correction=True, slope_eff=True, seccurrent=False, sediment_slide=False, fluc_bcs=False,
 mesh2d=mesh2d, bathymetry_2d=bathymetry_2d, input_dir='hydrodynamics_trench_super_fine', viscosity_hydro=10**(-6), ks=0.025, average_size=160 * (10**(-6)), dt=timestep, diffusivity = 0.15756753359379702, final_time=15*3600)
+=======
+morph.export_final_state("hydrodynamics_trench_fine", uv, elev)
+"""
+
+
+solver_obj, update_forcings_tracer, diff_bathy, diff_bathy_file = morph.morphological(boundary_conditions_fn=boundary_conditions_fn_trench, morfac=100, morfac_transport=True, suspendedload=True, convectivevel=True,
+                                                                                      bedload=True, angle_correction=True, slope_eff=True, seccurrent=False, sediment_slide=False, fluc_bcs=False,
+                                                                                      mesh2d=mesh2d, bathymetry_2d=bathymetry_2d, input_dir='hydrodynamics_trench_fine', viscosity_hydro=10**(-6), ks=0.025, average_size=160 * (10**(-6)), dt=0.2, final_time=15*3600,
+                                                                                      beta_fn=1.3, surbeta2_fn=1/1.5, alpha_secc_fn=0.75, angle_fn=35, mesh_step_size=0.2)
+>>>>>>> 48674e144ae442cdc3b36888a0cfe0aba1d3e9d2
 
 # run model
 solver_obj.iterate(update_forcings=update_forcings_tracer)
 
+<<<<<<< HEAD
 t2 = time.time()
 
 
@@ -107,10 +126,28 @@ for i in range(len(data[0].dropna())):
     print(i)
     datathetis.append(data[0].dropna()[i])
     bathymetrythetis1.append(-bath.at([np.round(data[0].dropna()[i], 3), 0.55]))
+=======
+data = pd.read_csv('experimental_data.csv', header=None)
+plt.scatter(data[0], data[1], label='Experimental Data')
+
+datathetis = []
+bathymetrythetis1 = []
+diff_thetis = []
+for i in range(len(data[0].dropna()[0:3])):
+    print(i)
+    datathetis.append(data[0].dropna()[i])
+    bathymetrythetis1.append(-solver_obj.fields.bathymetry_2d.at([np.round(data[0].dropna()[i], 3), 0.55]))
+    diff_thetis.append((data[1].dropna()[i] - bathymetrythetis1[-1])**2)
+for i in range(4, len(data[0].dropna())):
+    print(i)
+    datathetis.append(data[0].dropna()[i])
+    bathymetrythetis1.append(-solver_obj.fields.bathymetry_2d.at([np.round(data[0].dropna()[i], 3), 0.55]))
+>>>>>>> 48674e144ae442cdc3b36888a0cfe0aba1d3e9d2
     diff_thetis.append((data[1].dropna()[i] - bathymetrythetis1[-1])**2)
 
 df = pd.concat([pd.DataFrame(datathetis, columns=['x']), pd.DataFrame(bathymetrythetis1, columns=['bath'])], axis=1)
 
+<<<<<<< HEAD
 df.to_csv('fixed_output/'+ str(nx) + '_bed_trench_output.csv')
 
 print("Time: ")
@@ -125,3 +162,13 @@ f.write("\n")
 f.write(str(t2-t1))
 f.close()
 
+=======
+df.to_csv('bed_trench_output.csv')
+
+plt.plot(datathetis, bathymetrythetis1, '.', linewidth=2, label='adapted mesh')
+plt.legend()
+plt.show()
+
+print("L2 norm: ")
+print(np.sqrt(sum(diff_thetis)))
+>>>>>>> 48674e144ae442cdc3b36888a0cfe0aba1d3e9d2

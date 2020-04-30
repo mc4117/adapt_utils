@@ -24,7 +24,11 @@ class MorphOptions(ShallowWaterOptions):
     def set_up_suspended(self, mesh, tracer=None):
         P1 = FunctionSpace(mesh, "CG", 1)
         P1DG = FunctionSpace(mesh, "DG", 1)
+<<<<<<< HEAD
         P1_vec = VectorFunctionSpace(mesh, "CG", 1)
+=======
+        P1_vec = FunctionSpace(mesh, "CG", 1)
+>>>>>>> 48674e144ae442cdc3b36888a0cfe0aba1d3e9d2
         P1DG_vec = VectorFunctionSpace(mesh, "DG", 1)
 
         R = Constant(2650/1000 - 1)
@@ -64,15 +68,25 @@ class MorphOptions(ShallowWaterOptions):
         else:
             self.bathymetry = interpolate(self.bathymetry, P1)
 
+<<<<<<< HEAD
         self.depth = interpolate(self.elev_cg + self.bathymetry, P1)
 
         self.unorm = interpolate(self.horizontal_velocity**2 + self.vertical_velocity**2, P1DG)
+=======
+        self.depth = project(self.elev_cg + self.bathymetry, P1)
+
+        self.unorm = project(self.horizontal_velocity**2 + self.vertical_velocity**2, P1DG)
+>>>>>>> 48674e144ae442cdc3b36888a0cfe0aba1d3e9d2
 
         self.hc = conditional(self.depth > 0.001, self.depth, 0.001)
         self.aux = conditional(11.036*self.hc/self.ks > 1.001, 11.036*self.hc/self.ks, 1.001)
         self.qfc = 2/(ln(self.aux)/0.4)**2
 
+<<<<<<< HEAD
         self.TOB = interpolate(1000*0.5*self.qfc*self.unorm, P1)
+=======
+        self.TOB = project(1000*0.5*self.qfc*self.unorm, P1)
+>>>>>>> 48674e144ae442cdc3b36888a0cfe0aba1d3e9d2
 
         # skin friction coefficient
 
@@ -100,7 +114,10 @@ class MorphOptions(ShallowWaterOptions):
 
         self.depo, self.ero = self.set_source_tracer(P1DG, solver_obj=None, init=True)
 
+<<<<<<< HEAD
         
+=======
+>>>>>>> 48674e144ae442cdc3b36888a0cfe0aba1d3e9d2
         if self.conservative:
             if self.depth_integrated:
                 self.depth_int_sink = interpolate(self.depo/self.depth, P1DG)
@@ -109,6 +126,7 @@ class MorphOptions(ShallowWaterOptions):
                 self.sink = interpolate(self.depo/(self.depth**2), P1DG)
                 self.source = interpolate(self.ero/self.depth, P1DG)
         else:
+<<<<<<< HEAD
             if self.implicit_source:
                 self.sink = interpolate(self.depo/self.depth, P1DG)
                 self.source = interpolate(self.ero/self.depth, P1DG)
@@ -118,6 +136,10 @@ class MorphOptions(ShallowWaterOptions):
                     self.sink = None
                 else:
                     self.source = interpolate((-(self.depo*tracer) + self.ero)/self.depth, P1DG)
+=======
+            self.sink = interpolate(self.depo/self.depth, P1DG)
+            self.source = interpolate(self.ero/self.depth, P1DG)
+>>>>>>> 48674e144ae442cdc3b36888a0cfe0aba1d3e9d2
 
         if self.t_old.dat.data[:] == 0:
             if self.conservative:
@@ -271,11 +293,16 @@ class MorphOptions(ShallowWaterOptions):
                 self.source.interpolate(self.ero/self.depth)
             self.qbsourcedepth.interpolate(-(self.depo*solver_obj.fields.tracer_2d/self.depth) + self.ero)
         else:
+<<<<<<< HEAD
             if self.implicit_source:
                 self.sink.interpolate(self.depo/self.depth)
                 self.source.interpolate(self.ero/self.depth)
             else:
                 self.source.interpolate((-(self.depo*solver_obj.fields.tracer_2d) + self.ero)/self.depth)
+=======
+            self.sink.interpolate(self.depo/self.depth)
+            self.source.interpolate(self.ero/self.depth)
+>>>>>>> 48674e144ae442cdc3b36888a0cfe0aba1d3e9d2
             self.qbsourcedepth.interpolate(-(self.depo*solver_obj.fields.tracer_2d) + self.ero)
 
         if self.convective_vel_flag:

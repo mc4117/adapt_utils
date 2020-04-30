@@ -170,7 +170,7 @@ class BalzanoOptions(ShallowWaterOptions):
 
     def get_update_forcings(self, solver_obj):
         eta = solver_obj.fields.elev_2d
-        bathymetry_displacement = solver_obj.eq_sw.bathymetry_displacement_mass_term.wd_bathymetry_displacement
+        bathymetry_displacement = solver_obj.eq_sw.depth.wd_bathymetry_displacement
 
         def update_forcings(t):
             self.update_boundary_conditions(t=t)
@@ -184,9 +184,10 @@ class BalzanoOptions(ShallowWaterOptions):
         return update_forcings
 
     def get_export_func(self, solver_obj):
-        bathymetry_displacement = solver_obj.eq_sw.bathymetry_displacement_mass_term.wd_bathymetry_displacement
+        bathymetry_displacement = solver_obj.eq_sw.depth.wd_bathymetry_displacement
         eta = solver_obj.fields.elev_2d
         b = solver_obj.fields.bathymetry_2d
+
         def export_func():
             self.eta_tilde.project(eta + bathymetry_displacement(eta))
             self.eta_tilde_file.write(self.eta_tilde)
@@ -197,4 +198,25 @@ class BalzanoOptions(ShallowWaterOptions):
                 P1DG = solver_obj.function_spaces.P1DG_2d
                 wd = project(heaviside_approx(-eta-b, self.wetting_and_drying_alpha), P1DG)
                 self.wd_obs.append([wd.at([x, 0]) for x in self.xrange])
+
         return export_func
+
+    def plot_heaviside(self):
+        """Timeseries plot of approximate Heavyside function."""
+        scaling = 0.7
+        plt.figure(1, figsize=(scaling*7.0, scaling*4.0))
+        plt.gcf().subplots_adjust(bottom=0.15)
+        T = [[t/3600]*20 for t in self.trange]
+        X = [self.xrange for t in T]
+
+        cset1 = plt.contourf(T, X, self.wd_obs, 20, cmap=plt.cm.get_cmap('binary'))
+        plt.clim(0.0, 1.2)
+        # cset2 = plt.contour(T, X, self.wd_obs, 20, cmap=plt.cm.get_cmap('binary'))
+        plt.clim(0.0, 1.2)
+        # cset3 = plt.contour(T, X, self.wd_obs, 1, colors='k', linestyles='dotted', linewidths=5.0, levels=[0.5])
+        cb = plt.colorbar(cset1, ticks=np.linspace(0, 1, 6))
+        cb.set_label(r"$\mathcal H(\eta-b)$")
+        plt.ylim(min(X[0]), max(X[0]))
+        plt.xlabel(r"Time [$\mathrm h$]")
+        plt.ylabel(r"$x$ [$\mathrm m$]")
+        plt.savefig(os.path.join(self.di, "heaviside_timeseries.pdf"))

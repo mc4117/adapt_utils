@@ -10,9 +10,21 @@ inundated_beach/screenshots/
 inundated_beach/__pycache__/
 inundated_beach/videos/
 inundated_beach/strip.geo
+<<<<<<< HEAD
 rossby_wave/*
 slotted_cylinder/*
 tsunami1d/*
+=======
+rossby_wave/outputs/
+rossby_wave/screenshots/
+rossby_wave/__pycache__/
+rossby_wave/run_ale.py
+slotted_cylinder/outputs/
+slotted_cylinder/screenshots/
+slotted_cylinder/__pycache__/
+tsunami1d/outputs/
+tsunami1d/__pycache__/
+>>>>>>> 48674e144ae442cdc3b36888a0cfe0aba1d3e9d2
 ale_advection/outputs/
 ale_advection/screenshots/
 ale_advection/__pycache__/

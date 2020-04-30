@@ -34,7 +34,10 @@ class TrenchOptions(MorphOptions):
         self.P1_vec_dg = VectorFunctionSpace(self.default_mesh, "DG", 1)
 
         self.plot_pvd = True
+<<<<<<< HEAD
         self.implicit_source = False
+=======
+>>>>>>> 48674e144ae442cdc3b36888a0cfe0aba1d3e9d2
 
         ts = time.time()
         st = datetime.datetime.fromtimestamp(ts).strftime('%Y-%m-%d %H:%M:%S')
@@ -64,7 +67,11 @@ class TrenchOptions(MorphOptions):
         self.num_hours = 15
 
         # Physical
+<<<<<<< HEAD
         self.base_diffusivity = 0.15756753359379702
+=======
+        self.base_diffusivity = 0.15
+>>>>>>> 48674e144ae442cdc3b36888a0cfe0aba1d3e9d2
 
         self.porosity = Constant(0.4)
         self.ks = 0.025

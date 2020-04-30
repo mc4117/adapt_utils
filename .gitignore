@@ -11,6 +11,7 @@ adjoint.py
 *.msh
 *.pvd
 *.vtu
+*.h5
 *.txt
 *.ipynb_checkpoints
 *.hdf5
@@ -19,3 +20,4 @@ adjoint.py
 tracer/*
 case_studies/*
 *.patch
+*.png
