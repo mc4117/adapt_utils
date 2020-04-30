@@ -134,11 +134,7 @@ def hydrodynamics_only(boundary_conditions_fn, mesh2d, bathymetry_2d, uv_init, e
 
 def morphological(boundary_conditions_fn, morfac, morfac_transport, suspendedload, convectivevel, bedload, angle_correction, slope_eff, seccurrent, sediment_slide,
                   mesh2d, bathymetry_2d, input_dir, viscosity_hydro, ks, average_size, dt, final_time,
-<<<<<<< HEAD
                   beta_fn = 1.3, surbeta2_fn = 1/1.5, alpha_secc_fn = 0.75, angle_fn = 35, mesh_step_size = 0.2, friction='nikuradse', friction_coef=0, d90=0, fluc_bcs=False, bed_form='meyer', sus_form='vanrijn', diffusivity=0.15):
-=======
-                  beta_fn, surbeta2_fn, alpha_secc_fn, angle_fn, mesh_step_size, friction='nikuradse', friction_coef=0, d90=0, fluc_bcs=False, bed_form='meyer', sus_form='vanrijn', diffusivity=0.15):
->>>>>>> 48674e144ae442cdc3b36888a0cfe0aba1d3e9d2
     """
     Set up a full morphological model simulation using as an initial condition the results of a hydrodynamic only model.
     Inputs:
@@ -303,15 +299,11 @@ def morphological(boundary_conditions_fn, morfac, morfac_transport, suspendedloa
                         print('Unrecognised suspended sediment transport formula. Please choose "vanrijn" or "soulsby"')
 
                     # calculate depth-averaged source term for sediment concentration equation
-<<<<<<< HEAD
                     ero.interpolate(settling_velocity*ceq)
                     depo.interpolate(settling_velocity*coeff)
                     source.interpolate(ero/depth)
                     sink.interpolate(depo/depth)
 
-=======
-                    source.interpolate(-(settling_velocity*coeff*solver_obj.fields.tracer_2d/depth) + (settling_velocity*ceq/depth))
->>>>>>> 48674e144ae442cdc3b36888a0cfe0aba1d3e9d2
                     # update sediment rate to ensure equilibrium at inflow
                     sediment_rate.assign(ceq.at([0, 0])/coeff.at([0, 0]))
 
@@ -564,26 +556,6 @@ def morphological(boundary_conditions_fn, morfac, morfac_transport, suspendedloa
     dzdx = th.Function(V).interpolate(old_bathymetry_2d.dx(0))
     dzdy = th.Function(V).interpolate(old_bathymetry_2d.dx(1))
 
-<<<<<<< HEAD
-=======
-    if sediment_slide:
-        # add component to bedload transport to ensure the slope angle does not exceed a certain value
-
-        # calculate normal to the bed
-        nx = th.Function(V).interpolate(dzdx/th.sqrt(1 + (dzdx**2 + dzdy**2)))
-        ny = th.Function(V).interpolate(dzdy/th.sqrt(1 + (dzdx**2 + dzdy**2)))
-        nz = th.Function(V).interpolate(1/th.sqrt(1 + (dzdx**2 + dzdy**2)))
-
-        sinbeta = th.Function(V).interpolate(th.sqrt(1 - (nz**2)))
-        betaangle = th.Function(V).interpolate(th.asin(sinbeta))
-        tanbeta = th.Function(V).interpolate(sinbeta/nz)
-
-        # calculating magnitude of added component
-        qaval = th.Function(V).interpolate(th.conditional(tanbeta - tanphi > 0, (1-porosity)*0.5*(L**2)*(tanbeta - tanphi)/(th.cos(betaangle*dt*morfac)), 0))
-        # multiplying by direction
-        alphaconst = th.Function(V).interpolate(th.conditional(sinbeta > 0, - qaval*(nz**2)/sinbeta, 0))
->>>>>>> 48674e144ae442cdc3b36888a0cfe0aba1d3e9d2
-
     if suspendedload:
         # deposition flux - calculating coefficient to account for stronger conc at bed
         B = th.Function(P1_2d).interpolate(th.conditional(a > depth, a/a, a/depth))
@@ -616,14 +588,10 @@ def morphological(boundary_conditions_fn, morfac, morfac_transport, suspendedloa
         testtracer = th.Function(P1_2d).interpolate(ceq/coeff)
 
         # calculate depth-averaged source term for sediment concentration equation
-<<<<<<< HEAD
         ero = th.Function(P1_2d).interpolate(settling_velocity*ceq)
         depo = th.Function(P1_2d).interpolate(settling_velocity*coeff)
         source = th.Function(P1_2d).interpolate(ero/depth)
         sink = th.Function(P1_2d).interpolate(depo/depth)
-=======
-        source = th.Function(P1_2d).interpolate(-(settling_velocity*coeff*sediment_rate/depth) + (settling_velocity*ceq/depth))
->>>>>>> 48674e144ae442cdc3b36888a0cfe0aba1d3e9d2
 
         # add suspended sediment transport to exner equation multiplied by depth as the exner equation is not depth-averaged
         qbsourcedepth = th.Function(V).interpolate(-depo*testtracer + ero)
