@@ -42,7 +42,7 @@ def gradient_interface_monitor(mesh, alpha=alpha, gamma=0.0):
     # eta = swp.solution.split()[1]
     b = swp.solver_obj.fields.bathymetry_2d
     # bath_gradient = recovery.construct_gradient(b)
-    bath_hess = recovery.construct_hessian(b)
+    bath_hess = recovery.construct_hessian(b, op = op)
     frob_bath_hess = Function(b.function_space()).project(local_frobenius_norm(bath_hess))
 
     # current_mesh = eta.function_space().mesh()
