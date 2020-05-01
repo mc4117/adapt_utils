@@ -12,7 +12,7 @@ from adapt_utils.norms import local_frobenius_norm
 
 t1 = time.time()
 
-nx = 1.0
+nx = 0.2
 alpha = 100.0
 
 op = TrenchOptions(approach='monge_ampere',

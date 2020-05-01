@@ -35,6 +35,7 @@ class TrenchOptions(MorphOptions):
 
         self.plot_pvd = True
         self.implicit_source = False
+        self.hessian_recovery = 'dL2'
 
         ts = time.time()
         st = datetime.datetime.fromtimestamp(ts).strftime('%Y-%m-%d %H:%M:%S')
