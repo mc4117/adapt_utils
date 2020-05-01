@@ -13,6 +13,7 @@ from adapt_utils.norms import local_frobenius_norm
 t1 = time.time()
 
 nx = 1.0
+alpha = 100.0
 
 op = TrenchOptions(approach='monge_ampere',
                    plot_timeseries=False,
@@ -28,7 +29,7 @@ op = TrenchOptions(approach='monge_ampere',
 swp = UnsteadyShallowWaterProblem(op, levels=0)
 swp.setup_solver()
 
-def gradient_interface_monitor(mesh, alpha=20.0, gamma=0.0):
+def gradient_interface_monitor(mesh, alpha=alpha, gamma=0.0):
 
     """
     Monitor function focused around the steep_gradient (budd acta numerica)
@@ -92,7 +93,7 @@ for i in range(len(data[0].dropna())):
 
 df = pd.concat([pd.DataFrame(datathetis, columns=['x']), pd.DataFrame(bathymetrythetis1, columns=['bath'])], axis=1)
 
-df.to_csv('adapt_output2/bed_trench_output' + str(nx) + '.csv')
+df.to_csv('adapt_output2/bed_trench_output' + str(nx) + '_' + str(alpha) + '.csv')
 
 plt.plot(datathetis, bathymetrythetis1, '.', linewidth=2, label='adapted mesh')
 plt.legend()
