@@ -50,6 +50,9 @@ class SteadyShallowWaterProblem(SteadyProblem):
         z.rename("Adjoint fluid velocity")
         zeta.rename("Adjoint elevation")
 
+    def get_tracer(self):
+        return self.solver_obj.fields.tracer_2d
+
     def project_tracer(self, val, adjoint=False):
         self.project(val, out=self.get_tracer())
 
@@ -435,27 +438,8 @@ class UnsteadyShallowWaterProblem(UnsteadyProblem):
             fe = VectorElement("DG", triangle, p)*FiniteElement("Lagrange", triangle, p+1)
         else:
             raise NotImplementedError
-        
-        if 'solution_old_bathymetry' in kwargs:
-            solution_old_bathymetry = kwargs.pop('solution_old_bathymetry')
-        else:
-            solution_old_bathymetry = None
-            
-        if 'solution_old_tracer' in kwargs:
-            solution_old_tracer = kwargs.pop('solution_old_tracer')
-        else:
-            solution_old_tracer = None         
-            
-        if 'solver_obj' in kwargs:
-            solver_obj = kwargs.pop('solver_obj')
-        else:
-            solver_obj = None
-        
-        self.solution_old_bathymetry = solution_old_bathymetry
-        self.solution_old_tracer = solution_old_tracer
-        self.solver_obj = solver_obj
-        
-        super(UnsteadyShallowWaterProblem, self).__init__(op, mesh, fe, solution_old_bathymetry, solution_old_tracer, solver_obj, **kwargs)
+
+        super(UnsteadyShallowWaterProblem, self).__init__(op, mesh, fe, **kwargs)
         prev_solution = kwargs.get('prev_solution')
 
         if prev_solution is not None:
@@ -490,18 +474,38 @@ class UnsteadyShallowWaterProblem(UnsteadyProblem):
         z.rename("Adjoint fluid velocity")
         zeta.rename("Adjoint elevation")
 
-    def get_tracer(self):
-        return self.solver_obj.fields.tracer_2d
-
-    def project_tracer(self, val, adjoint=False):
-        self.project(val, out=self.get_tracer())
-
     def set_stabilisation(self):
         self.stabilisation = self.stabilisation or 'no'
         if self.stabilisation in ('no', 'lax_friedrichs'):
             self.stabilisation_parameter = self.op.stabilisation_parameter
         else:
             raise ValueError("Stabilisation method {:s} for {:s} not recognised".format(self.stabilisation, self.__class__.__name__))
+
+    def get_tracer(self, adjoint=False):
+        """
+        Retrieve forward or adjoint solution, as specified by boolean kwarg `adjoint`.
+        """
+        return self.adjoint_tracer if adjoint else self.solution_old_tracer 
+
+    def get_bathymetry(self, adjoint=False):
+        """
+        Retrieve forward or adjoint solution, as specified by boolean kwarg `adjoint`.
+        """
+        return self.adjoint_bath if adjoint else self.solution_old_bathymetry
+
+    def project_tracer(self, val, adjoint=False):
+        """
+        Project forward or adjoint solution, as specified by the boolean kwarg
+        `adjoint`.
+        """
+        self.project(val, out=self.get_tracer(adjoint=adjoint))
+
+    def project_bathymetry(self, val, adjoint=False):
+        """
+        Project forward or adjoint solution, as specified by the boolean kwarg
+        `adjoint`.
+        """
+        self.project(val, out=self.get_bathymetry(adjoint=adjoint))
 
     def solve_step(self, adjoint=False):
         try:

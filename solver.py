@@ -278,18 +278,6 @@ class SteadyProblem():
         Retrieve forward or adjoint solution, as specified by boolean kwarg `adjoint`.
         """
         return self.adjoint_solution if adjoint else self.solution
-    
-    def get_tracer(self, adjoint=False):
-        """
-        Retrieve forward or adjoint solution, as specified by boolean kwarg `adjoint`.
-        """
-        return self.adjoint_tracer if adjoint else self.solution_old_tracer 
-    
-    def get_bathymetry(self, adjoint=False):
-        """
-        Retrieve forward or adjoint solution, as specified by boolean kwarg `adjoint`.
-        """
-        return self.adjoint_bath if adjoint else self.solution_old_bathymetry
 
     def get_error(self, adjoint=False):
         """
@@ -365,20 +353,6 @@ class SteadyProblem():
         `adjoint`.
         """
         self.project(val, out=self.get_solution(adjoint=adjoint))
-        
-    def project_tracer(self, val, adjoint=False):
-        """
-        Project forward or adjoint solution, as specified by the boolean kwarg
-        `adjoint`.
-        """
-        self.project(val, out=self.get_tracer(adjoint=adjoint))        
-        
-    def project_bathymetry(self, val, adjoint=False):
-        """
-        Project forward or adjoint solution, as specified by the boolean kwarg
-        `adjoint`.
-        """
-        self.project(val, out=self.get_bathymetry(adjoint=adjoint))              
 
     def get_qoi_kernel(self):
         """
@@ -835,9 +809,7 @@ class SteadyProblem():
             op_copy.update(self.op)
 
             tmp = type(self)(op_copy, mesh=am_copy.mesh, discrete_adjoint=self.discrete_adjoint,
-                             prev_solution=self.prev_solution, levels=self.levels, 
-                             solution_old_bathymetry = self.solver_obj.fields.bathymetry_2d, 
-                             solution_old_tracer = self.solver_obj.fields.tracer_2d)
+                             prev_solution=self.prev_solution, levels=self.levels)
             x = Function(tmp.mesh.coordinates)
 
             x.dat.data[:] = mesh_mover.x.dat.data  # TODO: PyOP2
@@ -846,8 +818,9 @@ class SteadyProblem():
 
             tmp.project_fields(self)
             tmp.project_solution(self.solution)
-            tmp.project_bathymetry(self.solution_old_bathymetry)
-            tmp.project_tracer(self.solution_old_tracer)
+            if self.op.solve_tracer:
+                tmp.project_bathymetry(self.solution_old_bathymetry)
+                tmp.project_tracer(self.solution_old_tracer)
 
             tmp.project_solution(self.adjoint_solution, adjoint=True)
 
@@ -860,8 +833,9 @@ class SteadyProblem():
             self.boundary_conditions = self.op.set_boundary_conditions(self.V)
             self.project_fields(tmp)
             self.project_solution(tmp.solution)
-            self.project_bathymetry(tmp.solution_old_bathymetry)
-            self.project_tracer(tmp.solution_old_tracer)
+            if self.op.solve_tracer:
+                self.project_bathymetry(tmp.solution_old_bathymetry)
+                self.project_tracer(tmp.solution_old_tracer)
             self.project_solution(tmp.adjoint_solution, adjoint=True)
 
             # Plot monitor function
@@ -1084,9 +1058,8 @@ class UnsteadyProblem(SteadyProblem):
         * solve adjoint PDE;
         * adapt mesh based on some error estimator of choice.
     """
-    def __init__(self, op, mesh, finite_element, solution_old_bathymetry, solution_old_tracer, **kwargs):
-        self.solution_old_bathymetry = solution_old_bathymetry
-        self.solution_old_tracer = solution_old_tracer
+    def __init__(self, op, mesh, finite_element, **kwargs):
+
         super(UnsteadyProblem, self).__init__(op, mesh, finite_element, **kwargs)
         self.set_start_condition()
         self.step_end = op.end_time if self.approach == 'fixed_mesh' else op.dt*op.dt_per_remesh
@@ -1164,12 +1137,14 @@ class UnsteadyProblem(SteadyProblem):
                     self.set_start_condition(adjoint)
                 elif i == 0:
                     self.project_solution(solution, adjoint=adjoint)
-                    self.project_bathymetry(bathymetry, adjoint=adjoint)
-                    self.project_tracer(tracer, adjoint=adjoint)
+                    if op.solve_tracer:
+                        self.project_bathymetry(bathymetry, adjoint=adjoint)
+                        self.project_tracer(tracer, adjoint=adjoint)
                 else:
                     self.project_solution(solution_old, adjoint=adjoint)
-                    self.project_bathymetry(bathymetry, adjoint=adjoint)
-                    self.project_tracer(tracer, adjoint=adjoint)                    
+                    if op.solv_tracer:
+                        self.project_bathymetry(bathymetry, adjoint=adjoint)
+                        self.project_tracer(tracer, adjoint=adjoint)
 
                 # Solve PDE on new mesh
                 op.plot_pvd = i == 0
@@ -1180,8 +1155,9 @@ class UnsteadyProblem(SteadyProblem):
                 # Store solutions from last two steps on first mesh in sequence
                 if i == 0:
                     solution = Function(self.solution)
-                    bathymetry = Function(self.solution_old_bathymetry)
-                    tracer = Function(self.solution_old_tracer)                  
+                    if op.solve_tracer:
+                        bathymetry = Function(self.solution_old_bathymetry)
+                        tracer = Function(self.solution_old_tracer)
                     if self.step_end + op.dt*op.dt_per_remesh > op.end_time:
                         break  # No need to do adapt for final timestep
 
