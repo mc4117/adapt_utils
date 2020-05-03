@@ -2,17 +2,17 @@
   return _prepare_from_string(" ".join(pjargs))
 /data2/firedrake/lib/python3.5/site-packages/pyproj/crs/crs.py:294: FutureWarning: '+init=<authority>:<code>' syntax is deprecated. '<authority>:<code>' is the preferred initialization method. When making the change, be mindful of axis order changes: https://pyproj4.github.io/pyproj/stable/gotchas.html#axis-order-changes-in-proj-6
   projstring = _prepare_from_string(" ".join((projstring, projkwargs)))
-Minimum angle in mesh: 41.35 degrees
-Maximum SIPG value:        11.36
-Maximum tracer SIPG value: 11.36
+Minimum angle in mesh: 28.81 degrees
+Maximum SIPG value:        18.18
+Maximum tracer SIPG value: 18.18
 dt = 0.3
 Coupled time integrator: CoupledCrankNicolson2D
   Shallow Water time integrator: CrankNicolson
   Tracer time integrator: CrankNicolson
 Using time integrator: CoupledCrankNicolson2D
-Minimum angle in mesh: 41.35 degrees
-Maximum SIPG value:        11.36
-Maximum tracer SIPG value: 11.36
+Minimum angle in mesh: 28.81 degrees
+Maximum SIPG value:        18.18
+Maximum tracer SIPG value: 18.18
 dt = 0.3
 Coupled time integrator: CoupledCrankNicolson2D
   Shallow Water time integrator: CrankNicolson
@@ -21,153 +21,153 @@ Using time integrator: CoupledCrankNicolson2D
 r-adaptation converged in 49 iterations.
     0     0 T=      0.00 eta norm:     1.6804 u norm:     1.9474  0.00
 volume2d rel. error  0.0000e+00
-    1    60 T=     18.00 eta norm:     1.6799 u norm:     1.9464 118.85
-volume2d rel. error -7.0683e-04
-r-adaptation converged in 47 iterations.
-    1    60 T=     18.00 eta norm:     1.6802 u norm:     1.9398  0.00
-volume2d rel. error  0.0000e+00
-    2   120 T=     36.00 eta norm:     1.6797 u norm:     1.9465 118.66
-volume2d rel. error -2.9897e-04
+    1    60 T=     18.00 eta norm:     1.6799 u norm:     1.9458 83.36
+volume2d rel. error -7.0351e-04
 r-adaptation converged in 48 iterations.
-    2   120 T=     36.00 eta norm:     1.6796 u norm:     1.9491  0.00
+    1    60 T=     18.00 eta norm:     1.6801 u norm:     1.9437  0.00
 volume2d rel. error  0.0000e+00
-    3   180 T=     54.00 eta norm:     1.6801 u norm:     1.9391 117.23
-volume2d rel. error  9.6950e-05
+    2   120 T=     36.00 eta norm:     1.6799 u norm:     1.9440 87.70
+volume2d rel. error -1.4868e-04
 r-adaptation converged in 48 iterations.
-    3   180 T=     54.00 eta norm:     1.6801 u norm:     1.9406  0.00
+    2   120 T=     36.00 eta norm:     1.6799 u norm:     1.9448  0.00
 volume2d rel. error  0.0000e+00
-    4   240 T=     72.00 eta norm:     1.6794 u norm:     1.9400 120.28
-volume2d rel. error -4.8909e-04
+    3   180 T=     54.00 eta norm:     1.6799 u norm:     1.9403 86.27
+volume2d rel. error -1.3441e-04
 r-adaptation converged in 48 iterations.
-    4   240 T=     72.00 eta norm:     1.6794 u norm:     1.9411  0.00
+    3   180 T=     54.00 eta norm:     1.6798 u norm:     1.9416  0.00
 volume2d rel. error  0.0000e+00
-    5   300 T=     90.00 eta norm:     1.6794 u norm:     1.9383 119.88
-volume2d rel. error -2.6309e-04
+    4   240 T=     72.00 eta norm:     1.6796 u norm:     1.9393 87.21
+volume2d rel. error -3.1617e-04
+r-adaptation converged in 48 iterations.
+    4   240 T=     72.00 eta norm:     1.6795 u norm:     1.9404  0.00
+volume2d rel. error  0.0000e+00
+    5   300 T=     90.00 eta norm:     1.6793 u norm:     1.9381 87.10
+volume2d rel. error -3.7834e-04
+r-adaptation converged in 48 iterations.
+    5   300 T=     90.00 eta norm:     1.6793 u norm:     1.9390  0.00
+volume2d rel. error  0.0000e+00
+    6   360 T=    108.00 eta norm:     1.6789 u norm:     1.9374 87.59
+volume2d rel. error -5.5274e-04
+r-adaptation converged in 48 iterations.
+    6   360 T=    108.00 eta norm:     1.6789 u norm:     1.9382  0.00
+volume2d rel. error  0.0000e+00
+    7   420 T=    126.00 eta norm:     1.6785 u norm:     1.9372 86.43
+volume2d rel. error -6.6486e-04
+r-adaptation converged in 48 iterations.
+    7   420 T=    126.00 eta norm:     1.6784 u norm:     1.9379  0.00
+volume2d rel. error  0.0000e+00
+    8   480 T=    144.00 eta norm:     1.6780 u norm:     1.9372 86.97
+volume2d rel. error -8.0373e-04
+r-adaptation converged in 48 iterations.
+    8   480 T=    144.00 eta norm:     1.6779 u norm:     1.9379  0.00
+volume2d rel. error  0.0000e+00
+    9   540 T=    162.00 eta norm:     1.6775 u norm:     1.9376 87.22
+volume2d rel. error -9.3141e-04
+r-adaptation converged in 48 iterations.
+    9   540 T=    162.00 eta norm:     1.6774 u norm:     1.9382  0.00
+volume2d rel. error  0.0000e+00
+   10   600 T=    180.00 eta norm:     1.6769 u norm:     1.9384 88.18
+volume2d rel. error -1.0570e-03
 r-adaptation converged in 47 iterations.
-    5   300 T=     90.00 eta norm:     1.6794 u norm:     1.9392  0.00
+   10   600 T=    180.00 eta norm:     1.6769 u norm:     1.9391  0.00
 volume2d rel. error  0.0000e+00
-    6   360 T=    108.00 eta norm:     1.6788 u norm:     1.9377 116.66
-volume2d rel. error -6.1080e-04
+   11   660 T=    198.00 eta norm:     1.6764 u norm:     1.9394 86.52
+volume2d rel. error -1.1711e-03
 r-adaptation converged in 47 iterations.
-    6   360 T=    108.00 eta norm:     1.6788 u norm:     1.9385  0.00
+   11   660 T=    198.00 eta norm:     1.6763 u norm:     1.9400  0.00
 volume2d rel. error  0.0000e+00
-    7   420 T=    126.00 eta norm:     1.6785 u norm:     1.9374 118.99
-volume2d rel. error -6.2958e-04
+   12   720 T=    216.00 eta norm:     1.6758 u norm:     1.9408 86.52
+volume2d rel. error -1.2896e-03
 r-adaptation converged in 47 iterations.
-    7   420 T=    126.00 eta norm:     1.6785 u norm:     1.9381  0.00
+   12   720 T=    216.00 eta norm:     1.6758 u norm:     1.9414  0.00
 volume2d rel. error  0.0000e+00
-    8   480 T=    144.00 eta norm:     1.6780 u norm:     1.9374 119.94
-volume2d rel. error -8.1523e-04
+   13   780 T=    234.00 eta norm:     1.6752 u norm:     1.9424 87.42
+volume2d rel. error -1.3910e-03
 r-adaptation converged in 47 iterations.
-    8   480 T=    144.00 eta norm:     1.6779 u norm:     1.9381  0.00
+   13   780 T=    234.00 eta norm:     1.6752 u norm:     1.9430  0.00
 volume2d rel. error  0.0000e+00
-    9   540 T=    162.00 eta norm:     1.6775 u norm:     1.9379 121.25
-volume2d rel. error -9.2150e-04
+   14   840 T=    252.00 eta norm:     1.6746 u norm:     1.9443 86.91
+volume2d rel. error -1.4935e-03
 r-adaptation converged in 47 iterations.
-    9   540 T=    162.00 eta norm:     1.6774 u norm:     1.9385  0.00
+   14   840 T=    252.00 eta norm:     1.6746 u norm:     1.9449  0.00
 volume2d rel. error  0.0000e+00
-   10   600 T=    180.00 eta norm:     1.6769 u norm:     1.9386 120.20
-volume2d rel. error -1.0540e-03
+   15   900 T=    270.00 eta norm:     1.6741 u norm:     1.9465 86.49
+volume2d rel. error -1.5889e-03
 r-adaptation converged in 47 iterations.
-   10   600 T=    180.00 eta norm:     1.6769 u norm:     1.9392  0.00
-volume2d rel. error  0.0000e+00
-   11   660 T=    198.00 eta norm:     1.6764 u norm:     1.9396 117.50
-volume2d rel. error -1.1692e-03
-r-adaptation converged in 47 iterations.
-   11   660 T=    198.00 eta norm:     1.6763 u norm:     1.9402  0.00
-volume2d rel. error  0.0000e+00
-   12   720 T=    216.00 eta norm:     1.6758 u norm:     1.9410 118.77
-volume2d rel. error -1.2844e-03
-r-adaptation converged in 46 iterations.
-   12   720 T=    216.00 eta norm:     1.6758 u norm:     1.9415  0.00
-volume2d rel. error  0.0000e+00
-   13   780 T=    234.00 eta norm:     1.6752 u norm:     1.9426 118.89
-volume2d rel. error -1.3891e-03
-r-adaptation converged in 46 iterations.
-   13   780 T=    234.00 eta norm:     1.6752 u norm:     1.9432  0.00
-volume2d rel. error  0.0000e+00
-   14   840 T=    252.00 eta norm:     1.6746 u norm:     1.9445 116.32
-volume2d rel. error -1.4906e-03
-r-adaptation converged in 46 iterations.
-   14   840 T=    252.00 eta norm:     1.6746 u norm:     1.9450  0.00
-volume2d rel. error  0.0000e+00
-   15   900 T=    270.00 eta norm:     1.6741 u norm:     1.9466 118.10
-volume2d rel. error -1.5862e-03
-r-adaptation converged in 46 iterations.
    15   900 T=    270.00 eta norm:     1.6740 u norm:     1.9471  0.00
 volume2d rel. error  0.0000e+00
-   16   960 T=    288.00 eta norm:     1.6735 u norm:     1.9490 119.74
-volume2d rel. error -1.6744e-03
-r-adaptation converged in 46 iterations.
-   16   960 T=    288.00 eta norm:     1.6735 u norm:     1.9495  0.00
+   16   960 T=    288.00 eta norm:     1.6735 u norm:     1.9488 87.30
+volume2d rel. error -1.6729e-03
+r-adaptation converged in 47 iterations.
+   16   960 T=    288.00 eta norm:     1.6735 u norm:     1.9493  0.00
 volume2d rel. error  0.0000e+00
-   17  1020 T=    306.00 eta norm:     1.6729 u norm:     1.9515 118.89
-volume2d rel. error -1.7576e-03
-r-adaptation converged in 46 iterations.
-   17  1020 T=    306.00 eta norm:     1.6729 u norm:     1.9520  0.00
+   17  1020 T=    306.00 eta norm:     1.6729 u norm:     1.9514 87.47
+volume2d rel. error -1.7644e-03
+r-adaptation converged in 47 iterations.
+   17  1020 T=    306.00 eta norm:     1.6729 u norm:     1.9519  0.00
 volume2d rel. error  0.0000e+00
-   18  1080 T=    324.00 eta norm:     1.6724 u norm:     1.9542 120.36
-volume2d rel. error -1.8370e-03
-r-adaptation converged in 46 iterations.
-   18  1080 T=    324.00 eta norm:     1.6724 u norm:     1.9547  0.00
+   18  1080 T=    324.00 eta norm:     1.6724 u norm:     1.9541 86.06
+volume2d rel. error -1.8334e-03
+r-adaptation converged in 47 iterations.
+   18  1080 T=    324.00 eta norm:     1.6724 u norm:     1.9546  0.00
 volume2d rel. error  0.0000e+00
-   19  1140 T=    342.00 eta norm:     1.6718 u norm:     1.9571 119.14
-volume2d rel. error -1.9102e-03
-r-adaptation converged in 46 iterations.
-   19  1140 T=    342.00 eta norm:     1.6718 u norm:     1.9576  0.00
+   19  1140 T=    342.00 eta norm:     1.6718 u norm:     1.9570 86.90
+volume2d rel. error -1.9163e-03
+r-adaptation converged in 47 iterations.
+   19  1140 T=    342.00 eta norm:     1.6718 u norm:     1.9577  0.00
 volume2d rel. error  0.0000e+00
-   20  1200 T=    360.00 eta norm:     1.6713 u norm:     1.9602 117.82
-volume2d rel. error -1.9789e-03
-r-adaptation converged in 46 iterations.
-   20  1200 T=    360.00 eta norm:     1.6713 u norm:     1.9607  0.00
+   20  1200 T=    360.00 eta norm:     1.6713 u norm:     1.9600 86.95
+volume2d rel. error -1.9727e-03
+r-adaptation converged in 47 iterations.
+   20  1200 T=    360.00 eta norm:     1.6713 u norm:     1.9606  0.00
 volume2d rel. error  0.0000e+00
-   21  1260 T=    378.00 eta norm:     1.6708 u norm:     1.9634 118.27
-volume2d rel. error -2.0430e-03
-r-adaptation converged in 46 iterations.
-   21  1260 T=    378.00 eta norm:     1.6708 u norm:     1.9640  0.00
+   21  1260 T=    378.00 eta norm:     1.6708 u norm:     1.9633 87.89
+volume2d rel. error -2.0511e-03
+r-adaptation converged in 47 iterations.
+   21  1260 T=    378.00 eta norm:     1.6707 u norm:     1.9640  0.00
 volume2d rel. error  0.0000e+00
-   22  1320 T=    396.00 eta norm:     1.6703 u norm:     1.9668 119.54
-volume2d rel. error -2.1041e-03
-r-adaptation converged in 46 iterations.
-   22  1320 T=    396.00 eta norm:     1.6702 u norm:     1.9674  0.00
+   22  1320 T=    396.00 eta norm:     1.6703 u norm:     1.9667 86.45
+volume2d rel. error -2.0982e-03
+r-adaptation converged in 47 iterations.
+   22  1320 T=    396.00 eta norm:     1.6702 u norm:     1.9673  0.00
 volume2d rel. error  0.0000e+00
-   23  1380 T=    414.00 eta norm:     1.6698 u norm:     1.9703 117.79
-volume2d rel. error -2.1622e-03
-r-adaptation converged in 46 iterations.
-   23  1380 T=    414.00 eta norm:     1.6697 u norm:     1.9709  0.00
+   23  1380 T=    414.00 eta norm:     1.6698 u norm:     1.9702 86.54
+volume2d rel. error -2.1670e-03
+r-adaptation converged in 47 iterations.
+   23  1380 T=    414.00 eta norm:     1.6697 u norm:     1.9708  0.00
 volume2d rel. error  0.0000e+00
-   24  1440 T=    432.00 eta norm:     1.6693 u norm:     1.9740 116.89
-volume2d rel. error -2.2150e-03
-r-adaptation converged in 46 iterations.
+   24  1440 T=    432.00 eta norm:     1.6693 u norm:     1.9739 86.15
+volume2d rel. error -2.2140e-03
+r-adaptation converged in 47 iterations.
    24  1440 T=    432.00 eta norm:     1.6692 u norm:     1.9746  0.00
 volume2d rel. error  0.0000e+00
-   25  1500 T=    450.00 eta norm:     1.6688 u norm:     1.9778 117.17
-volume2d rel. error -2.2680e-03
-r-adaptation converged in 45 iterations.
-   25  1500 T=    450.00 eta norm:     1.6688 u norm:     1.9784  0.00
+   25  1500 T=    450.00 eta norm:     1.6688 u norm:     1.9776 86.11
+volume2d rel. error -2.2667e-03
+r-adaptation converged in 47 iterations.
+   25  1500 T=    450.00 eta norm:     1.6688 u norm:     1.9783  0.00
 volume2d rel. error  0.0000e+00
-   26  1560 T=    468.00 eta norm:     1.6683 u norm:     1.9817 117.95
-volume2d rel. error -2.3155e-03
-r-adaptation converged in 45 iterations.
-   26  1560 T=    468.00 eta norm:     1.6683 u norm:     1.9823  0.00
+   26  1560 T=    468.00 eta norm:     1.6683 u norm:     1.9816 87.04
+volume2d rel. error -2.3175e-03
+r-adaptation converged in 46 iterations.
+   26  1560 T=    468.00 eta norm:     1.6683 u norm:     1.9822  0.00
 volume2d rel. error  0.0000e+00
-   27  1620 T=    486.00 eta norm:     1.6679 u norm:     1.9857 99.25
-volume2d rel. error -2.3606e-03
-r-adaptation converged in 45 iterations.
+   27  1620 T=    486.00 eta norm:     1.6679 u norm:     1.9856 86.35
+volume2d rel. error -2.3589e-03
+r-adaptation converged in 46 iterations.
    27  1620 T=    486.00 eta norm:     1.6678 u norm:     1.9863  0.00
 volume2d rel. error  0.0000e+00
-   28  1680 T=    504.00 eta norm:     1.6674 u norm:     1.9898 93.35
-volume2d rel. error -2.4060e-03
-r-adaptation converged in 45 iterations.
-   28  1680 T=    504.00 eta norm:     1.6674 u norm:     1.9904  0.00
+   28  1680 T=    504.00 eta norm:     1.6674 u norm:     1.9897 86.63
+volume2d rel. error -2.4041e-03
+r-adaptation converged in 46 iterations.
+   28  1680 T=    504.00 eta norm:     1.6674 u norm:     1.9903  0.00
 volume2d rel. error  0.0000e+00
-   29  1740 T=    522.00 eta norm:     1.6670 u norm:     1.9940 92.23
-volume2d rel. error -2.4433e-03
-r-adaptation converged in 44 iterations.
+   29  1740 T=    522.00 eta norm:     1.6670 u norm:     1.9940 85.71
+volume2d rel. error -2.4463e-03
+r-adaptation converged in 45 iterations.
    29  1740 T=    522.00 eta norm:     1.6669 u norm:     1.9946  0.00
 volume2d rel. error  0.0000e+00
-   30  1800 T=    540.00 eta norm:     1.6665 u norm:     1.9984 91.88
-volume2d rel. error -2.4851e-03
+   30  1800 T=    540.00 eta norm:     1.6665 u norm:     1.9983 83.82
+volume2d rel. error -2.4791e-03
 0
 1
 2
@@ -200,6 +200,6 @@ volume2d rel. error -2.4851e-03
 29
 30
 L2 norm: 
-0.032960863150088004
+0.03251779758287484
 total time: 
-4386.721446752548
+3348.89617562294
