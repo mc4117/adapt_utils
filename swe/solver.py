@@ -50,9 +50,6 @@ class SteadyShallowWaterProblem(SteadyProblem):
         z.rename("Adjoint fluid velocity")
         zeta.rename("Adjoint elevation")
 
-    def get_tracer(self):
-        return self.solver_obj.fields.tracer_2d
-
     def project_tracer(self, val, adjoint=False):
         self.project(val, out=self.get_tracer())
 
@@ -438,8 +435,29 @@ class UnsteadyShallowWaterProblem(UnsteadyProblem):
             fe = VectorElement("DG", triangle, p)*FiniteElement("Lagrange", triangle, p+1)
         else:
             raise NotImplementedError
-        super(UnsteadyShallowWaterProblem, self).__init__(op, mesh, fe, **kwargs)
+        
+        if 'solution_old_bathymetry' in kwargs:
+            solution_old_bathymetry = kwargs.pop('solution_old_bathymetry')
+        else:
+            solution_old_bathymetry = None
+            
+        if 'solution_old_tracer' in kwargs:
+            solution_old_tracer = kwargs.pop('solution_old_tracer')
+        else:
+            solution_old_tracer = None         
+            
+        if 'solver_obj' in kwargs:
+            solver_obj = kwargs.pop('solver_obj')
+        else:
+            solver_obj = None
+        
+        self.solution_old_bathymetry = solution_old_bathymetry
+        self.solution_old_tracer = solution_old_tracer
+        self.solver_obj = solver_obj
+        
+        super(UnsteadyShallowWaterProblem, self).__init__(op, mesh, fe, solution_old_bathymetry, solution_old_tracer, solver_obj, **kwargs)
         prev_solution = kwargs.get('prev_solution')
+
         if prev_solution is not None:
             self.interpolate_solution(prev_solution)
 
@@ -492,6 +510,26 @@ class UnsteadyShallowWaterProblem(UnsteadyProblem):
             raise NotImplementedError  # TODO
         if not hasattr(self, 'solver_obj'):
             self.setup_solver_forward()
+             
+            
+        if self.op.solve_tracer:
+            if self.solution_old_tracer is not None:
+                self.tracer_interp = project(self.solution_old_tracer, self.P1DG)
+            else:
+                self.tracer_interp = project(self.solver_obj.fields.tracer_2d, self.P1DG)
+                self.solution_old_tracer = project(self.solver_obj.fields.tracer_2d, self.P1DG)
+                
+        u_interp, eta_interp = self.solution.split()
+                
+        if self.op.solve_tracer:
+            if self.op.tracer_init is not None:
+                self.solver_obj.assign_initial_conditions(uv=u_interp, elev=eta_interp, tracer=self.tracer_interp) 
+                
+        self.solver_obj.fields.bathymetry_2d.project(self.solution_old_bathymetry)
+
+        self.solver_obj.options.simulation_end_time = self.step_end - 0.5*self.op.dt
+        self.op.update(self.solver_obj.options)
+
         self.solver_obj.iterate(update_forcings=self.op.get_update_forcings(self.solver_obj),
                                 export_func=self.op.get_export_func(self.solver_obj))
         self.solution = self.solver_obj.fields.solution_2d
@@ -517,13 +555,14 @@ class UnsteadyShallowWaterProblem(UnsteadyProblem):
         op = self.op
 
         # Use appropriate bathymetry
-        if hasattr(self, "solution_old_bathymetry"):
+        if self.solution_old_bathymetry is not None:
             if isinstance(self.solution_old_bathymetry, Constant):
                 op.bathymetry = Constant(self.solution_old_bathymetry)
             else:
                 op.bathymetry = project(self.solution_old_bathymetry, self.P1)
         else:
             op.bathymetry = self.op.set_bathymetry(self.P1)
+            self.solution_old_bathymetry = self.op.set_bathymetry(self.P1)
         b = op.bathymetry if self.op.solve_tracer else self.fields['bathymetry']
         self.solver_obj = solver2d.FlowSolver2d(self.mesh, b)
 
@@ -532,10 +571,11 @@ class UnsteadyShallowWaterProblem(UnsteadyProblem):
         # Initial conditions
         u_interp, eta_interp = self.solution.split()
         if op.solve_tracer:
-            if hasattr(self, 'solution_old_tracer'):
+            if self.solution_old_tracer is not None:
                 self.tracer_interp = project(self.solution_old_tracer, self.P1DG)
             else:
                 self.tracer_interp = project(self.op.tracer_init, self.P1DG)
+                self.solution_old_tracer = project(self.op.tracer_init, self.P1DG)
 
         if op.solve_tracer:
             self.uv_d, self.eta_d = self.solution.split()

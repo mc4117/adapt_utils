@@ -21,6 +21,14 @@ class MorphOptions(ShallowWaterOptions):
         self.depth_integrated = False
         super(MorphOptions, self).__init__(**kwargs)
 
+    def set_tracer_init(self, fs):
+        if self.conservative:
+            tracer_init = project(self.depth*self.ceq/self.coeff, fs)
+        else:
+            divisor  = interpolate(self.ceq/self.coeff, self.ceq.function_space())
+            tracer_init = project(divisor, fs)
+        return tracer_init
+
     def set_up_suspended(self, mesh, tracer=None):
         P1 = FunctionSpace(mesh, "CG", 1)
         P1DG = FunctionSpace(mesh, "DG", 1)
@@ -93,10 +101,10 @@ class MorphOptions(ShallowWaterOptions):
 
         if self.conservative:
             self.tracer_init_value = Constant(self.depth.at([0, 0])*self.ceq.at([0, 0])/self.coeff.at([0, 0]))
-            self.tracer_init = interpolate(self.depth*self.ceq/self.coeff, P1DG)
         else:
             self.tracer_init_value = Constant(self.ceq.at([0, 0])/self.coeff.at([0, 0]))
-            self.tracer_init = interpolate(self.ceq/self.coeff, P1DG)
+
+        self.tracer_init = self.set_tracer_init(self.P1DG)
 
         self.depo, self.ero = self.set_source_tracer(P1DG, solver_obj=None, init=True)
 
