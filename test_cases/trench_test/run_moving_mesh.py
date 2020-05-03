@@ -12,8 +12,8 @@ from adapt_utils.norms import local_frobenius_norm
 
 t1 = time.time()
 
-nx = 1.0
-alpha = 100.0
+nx = 0.4
+alpha = 200.0
 
 op = TrenchOptions(approach='monge_ampere',
                    plot_timeseries=False,
@@ -107,7 +107,7 @@ print(np.sqrt(sum(diff_thetis)))
 print("total time: ")
 print(t2-t1)
 
-f = open("adapt_output2/output_frob_norm" + str(nx) + '_' + str(100.0) + '.txt', "w+")
+f = open("adapt_output2/output_frob_norm" + str(nx) + '_' + str(alpha) + '.txt', "w+")
 f.write(str(np.sqrt(sum(diff_thetis))))
 f.write("\n")
 f.write(str(t2-t1))
