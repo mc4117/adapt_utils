@@ -1,4 +1,0 @@
-Traceback (most recent call last):
-  File "run_moving_mesh.py", line 1, in <module>
-    from thetis import *
-ImportError: No module named thetis

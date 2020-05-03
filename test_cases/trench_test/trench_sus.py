@@ -44,7 +44,7 @@ def boundary_conditions_fn_trench(bathymetry_2d, flag, morfac=1, t_new=0, state=
 # define mesh
 lx = 16
 ly = 1.1
-nx = np.int(lx*5*4.0)  # this has to be at least double the lx as otherwise don't get trench with right gradient
+nx = np.int(lx*5*2.0)  # this has to be at least double the lx as otherwise don't get trench with right gradient
 ny = 5
 mesh2d = th.RectangleMesh(nx, ny, lx, ly)
 
