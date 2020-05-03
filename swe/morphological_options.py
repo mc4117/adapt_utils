@@ -25,7 +25,7 @@ class MorphOptions(ShallowWaterOptions):
         if self.conservative:
             tracer_init = project(self.depth*self.ceq/self.coeff, fs)
         else:
-            divisor  = interpolate(self.ceq/self.coeff, self.ceq.function_space())
+            divisor = interpolate(self.ceq/self.coeff, self.ceq.function_space())
             tracer_init = project(divisor, fs)
         return tracer_init
 

@@ -11,7 +11,6 @@ import time
 import datetime
 import numpy as np
 import firedrake as fire
-import math
 import os
 
 
@@ -134,7 +133,7 @@ def hydrodynamics_only(boundary_conditions_fn, mesh2d, bathymetry_2d, uv_init, e
 
 def morphological(boundary_conditions_fn, morfac, morfac_transport, suspendedload, convectivevel, bedload, angle_correction, slope_eff, seccurrent, sediment_slide,
                   mesh2d, bathymetry_2d, input_dir, viscosity_hydro, ks, average_size, dt, final_time,
-                  beta_fn = 1.3, surbeta2_fn = 1/1.5, alpha_secc_fn = 0.75, angle_fn = 35, mesh_step_size = 0.2, friction='nikuradse', friction_coef=0, d90=0, fluc_bcs=False, bed_form='meyer', sus_form='vanrijn', diffusivity=0.15):
+                  beta_fn=1.3, surbeta2_fn=1/1.5, alpha_secc_fn=0.75, angle_fn=35, mesh_step_size=0.2, friction='nikuradse', friction_coef=0, d90=0, fluc_bcs=False, bed_form='meyer', sus_form='vanrijn', diffusivity=0.15):
     """
     Set up a full morphological model simulation using as an initial condition the results of a hydrodynamic only model.
     Inputs:
@@ -239,43 +238,8 @@ def morphological(boundary_conditions_fn, morfac, morfac_transport, suspendedloa
                 dzdx.interpolate(old_bathymetry_2d.dx(0))
                 dzdy.interpolate(old_bathymetry_2d.dx(1))
 
-                if sediment_slide:
-                    # add component to bedload transport to ensure the slope angle does not exceed a certain value
-
-                    # calculate normal to the bed
-                    nx.interpolate(dzdx/th.sqrt(1 + (dzdx**2 + dzdy**2)))
-                    ny.interpolate(dzdy/th.sqrt(1 + (dzdx**2 + dzdy**2)))
-                    nz.interpolate(1/th.sqrt(1 + (dzdx**2 + dzdy**2)))
-
-                    sinbeta.interpolate(th.sqrt(1 - (nz**2)))
-                    betaangle.interpolate(th.asin(sinbeta))
-                    tanbeta.assign(sinbeta/nz)
-
-                    # calculating magnitude of added component
-                    qaval.assign(th.conditional(tanbeta-tanphi > 0, (1-porosity)*0.5*(L**2)*(tanbeta - tanphi)/(th.cos(betaangle*dt*morfac)), 0))
-                    # multiplying by direction
-                    alphaconst.interpolate(th.conditional(sinbeta > 0, - qaval*(nz**2)/sinbeta, 0))
-
-                    # deriving the weak form of this extra component to be added to the finite element formulation of exner equation
-                    grad_test = th.grad(v)
-                    diff_tensor = th.as_matrix([[alphaconst, 0, ], [0, alphaconst, ]])
-                    diff_flux = th.dot(diff_tensor, th.grad(-old_bathymetry_2d))
-
-                    f = th.inner(grad_test, diff_flux)*(fire.dx)
-
-                    degree_h = P1_2d.ufl_element().degree()
-                    sigma = 5.0*degree_h*(degree_h + 1)/fire.CellSize(mesh2d)
-                    if degree_h == 0:
-                        sigma = 1.5 / fire.CellSize(mesh2d)
-
-                    alphaavg = th.avg(sigma)
-                    ds_interior = fire.dS
-                    f += -alphaavg*th.inner(th.jump(v, n), th.dot(th.avg(diff_tensor), th.jump(z_n, n)))*ds_interior
-                    f += -th.inner(th.avg(th.dot(diff_tensor, th.grad(v))), th.jump(z_n, n))*ds_interior
-                    f += -th.inner(th.jump(v, n), th.avg(th.dot(diff_tensor, th.grad(z_n))))*ds_interior
-                else:
-                    # initialise exner equation if not already initialised in sediment slide
-                    f = 0
+                # initialise exner equation
+                f = 0
 
                 if suspendedload:
                     # source term
@@ -492,10 +456,6 @@ def morphological(boundary_conditions_fn, morfac, morfac_transport, suspendedloa
     cparam = th.Constant((2650-1000)*9.81*average_size*(surbeta2**2))
     # secondary current parameter
     alpha_secc = th.Constant(alpha_secc_fn)
-    # maximum gradient allowed by sediment slide mechanism
-    tanphi = math.tan(angle_fn*math.pi/180)
-    # approximate mesh step size for sediment slide mechanism
-    L = th.Constant(mesh_step_size)
 
     # calculate critical shields parameter thetacr
     R = th.Constant(2650/1000 - 1)

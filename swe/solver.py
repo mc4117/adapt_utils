@@ -485,7 +485,7 @@ class UnsteadyShallowWaterProblem(UnsteadyProblem):
         """
         Retrieve forward or adjoint solution, as specified by boolean kwarg `adjoint`.
         """
-        return self.adjoint_tracer if adjoint else self.solution_old_tracer 
+        return self.adjoint_tracer if adjoint else self.solution_old_tracer
 
     def get_bathymetry(self, adjoint=False):
         """
@@ -514,21 +514,20 @@ class UnsteadyShallowWaterProblem(UnsteadyProblem):
             raise NotImplementedError  # TODO
         if not hasattr(self, 'solver_obj'):
             self.setup_solver_forward()
-             
-            
+
         if self.op.solve_tracer:
             if self.solution_old_tracer is not None:
                 self.tracer_interp = project(self.solution_old_tracer, self.P1DG)
             else:
                 self.tracer_interp = project(self.solver_obj.fields.tracer_2d, self.P1DG)
                 self.solution_old_tracer = project(self.solver_obj.fields.tracer_2d, self.P1DG)
-                
+
         u_interp, eta_interp = self.solution.split()
-                
+
         if self.op.solve_tracer:
             if self.op.tracer_init is not None:
-                self.solver_obj.assign_initial_conditions(uv=u_interp, elev=eta_interp, tracer=self.tracer_interp) 
-                
+                self.solver_obj.assign_initial_conditions(uv=u_interp, elev=eta_interp, tracer=self.tracer_interp)
+
         self.solver_obj.fields.bathymetry_2d.project(self.solution_old_bathymetry)
 
         self.solver_obj.options.simulation_end_time = self.step_end - 0.5*self.op.dt
