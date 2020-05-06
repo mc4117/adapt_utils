@@ -744,6 +744,10 @@ def export_final_state(inputdir, uv, elev,):
     chk.store(elev, name="elevation")
     th.File(inputdir + '/elevationout.pvd').write(elev)
     chk.close()
+    
+    plex = elev.function_space().mesh()._plex
+    viewer = PETSc.Viewer().createHDF5(inputdir + '/myplex.h5', 'w')
+    viewer(plex)        
 
 
 def initialise_fields(mesh2d, inputdir, outputdir,):
@@ -767,7 +771,3 @@ def initialise_fields(mesh2d, inputdir, outputdir,):
         th.File(outputdir + "/velocity_imported.pvd").write(uv_init)
         chk.close()
         return elev_init, uv_init,
-    
-    plex = elev.function_space().mesh()._plex
-    viewer = PETSc.Viewer().createHDF5(inputdir + '/myplex.h5', 'w')
-    viewer(plex)    

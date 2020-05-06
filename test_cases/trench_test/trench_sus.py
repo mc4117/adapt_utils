@@ -15,6 +15,7 @@ import time
 
 timestep = 0.3
 
+fac = 0.5
 
 def boundary_conditions_fn_trench(bathymetry_2d, flag, morfac=1, t_new=0, state='initial'):
     """
@@ -45,7 +46,7 @@ def boundary_conditions_fn_trench(bathymetry_2d, flag, morfac=1, t_new=0, state=
 # define mesh
 lx = 16
 ly = 1.1
-nx = np.int(lx*5*0.2)  # this has to be at least double the lx as otherwise don't get trench with right gradient
+nx = np.int(lx*5*fac)  # this has to be at least double the lx as otherwise don't get trench with right gradient
 ny = 5
 mesh2d = th.RectangleMesh(nx, ny, lx, ly)
 
@@ -67,7 +68,7 @@ trench = th.conditional(th.le(x, 5), depth_riv, th.conditional(th.le(x, 6.5), (1
                         th.conditional(th.le(x, 9.5), depth_trench, th.conditional(th.le(x, 11), -(1/1.5)*depth_diff*(x-11) + depth_riv, depth_riv))))
 bathymetry_2d.interpolate(-trench)
 
-"""
+
 # define initial elevation
 elev_init = th.Function(P1_2d).interpolate(th.Constant(0.4))
 uv_init = th.as_vector((0.51, 0.0))
@@ -80,8 +81,9 @@ solver_obj.iterate(update_forcings=update_forcings_hydrodynamics)
 
 
 uv, elev = solver_obj.fields.solution_2d.split()
-morph.export_final_state("hydrodynamics_trench_super_coarse", uv, elev)
-"""
+morph.export_final_state("hydrodynamics_trench_"+str(fac), uv, elev)
+
+stop
 
 t1 = time.time()
 
