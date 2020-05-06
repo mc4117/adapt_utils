@@ -42,3 +42,20 @@ error_list2.append(sum([(df_test4_2['bath'][i] - df_real['bath'][i])**2 for i in
 error_list2.append(sum([(df_test5_2['bath'][i] - df_real['bath'][i])**2 for i in range(len(df_real))]))
 error_list2.append(sum([(df_test6_2['bath'][i] - df_real['bath'][i])**2 for i in range(len(df_real))]))
 error_list2.append(sum([(df_test7_2['bath'][i] - df_real['bath'][i])**2 for i in range(len(df_real))]))
+
+df_test1_3 = pd.read_csv('adapt_output2/bed_trench_output_0.5_0.0.csv')
+df_test2_3 = pd.read_csv('adapt_output2/bed_trench_output_0.5_10.0.csv')
+#df_test3_3 = pd.read_csv('adapt_output2/bed_trench_output_0.5_25.0.csv')
+df_test4_3 = pd.read_csv('adapt_output2/bed_trench_output_0.5_50.0.csv')
+df_test5_3 = pd.read_csv('adapt_output2/bed_trench_output_0.5_100.0.csv')
+df_test6_3 = pd.read_csv('adapt_output2/bed_trench_output_0.5_200.0.csv')
+#df_test7_3 = pd.read_csv('adapt_output2/bed_trench_output_0.5_500.0.csv')
+
+error_list3 = []
+error_list3.append(sum([(df_test1_3['bath'][i] - df_real['bath'][i])**2 for i in range(len(df_real))]))
+error_list3.append(sum([(df_test2_3['bath'][i] - df_real['bath'][i])**2 for i in range(len(df_real))]))
+#error_list3.append(sum([(df_test3_3['bath'][i] - df_real['bath'][i])**2 for i in range(len(df_real))]))
+error_list3.append(sum([(df_test4_3['bath'][i] - df_real['bath'][i])**2 for i in range(len(df_real))]))
+error_list3.append(sum([(df_test5_3['bath'][i] - df_real['bath'][i])**2 for i in range(len(df_real))]))
+error_list3.append(sum([(df_test6_3['bath'][i] - df_real['bath'][i])**2 for i in range(len(df_real))]))
+#error_list3.append(sum([(df_test7_3['bath'][i] - df_real['bath'][i])**2 for i in range(len(df_real))]))
