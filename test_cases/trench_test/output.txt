@@ -2,19 +2,22 @@
   return _prepare_from_string(" ".join(pjargs))
 /data2/firedrake/lib/python3.5/site-packages/pyproj/crs/crs.py:294: FutureWarning: '+init=<authority>:<code>' syntax is deprecated. '<authority>:<code>' is the preferred initialization method. When making the change, be mindful of axis order changes: https://pyproj4.github.io/pyproj/stable/gotchas.html#axis-order-changes-in-proj-6
   projstring = _prepare_from_string(" ".join((projstring, projkwargs)))
-Minimum angle in mesh: 28.81 degrees
-Maximum SIPG value:        18.18
-Maximum tracer SIPG value: 18.18
+Minimum angle in mesh: 41.35 degrees
+Maximum SIPG value:        11.36
+Maximum tracer SIPG value: 11.36
 dt = 0.3
 Coupled time integrator: CoupledCrankNicolson2D
   Shallow Water time integrator: CrankNicolson
   Tracer time integrator: CrankNicolson
 Using time integrator: CoupledCrankNicolson2D
-Minimum angle in mesh: 28.81 degrees
-Maximum SIPG value:        18.18
-Maximum tracer SIPG value: 18.18
+Minimum angle in mesh: 41.35 degrees
+Maximum SIPG value:        11.36
+Maximum tracer SIPG value: 11.36
 dt = 0.3
 Coupled time integrator: CoupledCrankNicolson2D
   Shallow Water time integrator: CrankNicolson
   Tracer time integrator: CrankNicolson
 Using time integrator: CoupledCrankNicolson2D
+r-adaptation converged in 1 iterations.
+    0     0 T=      0.00 eta norm:     1.6804 u norm:     1.9473  0.00
+volume2d rel. error  0.0000e+00
