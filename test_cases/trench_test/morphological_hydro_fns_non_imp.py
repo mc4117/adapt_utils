@@ -13,6 +13,7 @@ import numpy as np
 import firedrake as fire
 import math
 import os
+from firedrake.petsc import PETSc
 
 
 def hydrodynamics_only(boundary_conditions_fn, mesh2d, bathymetry_2d, uv_init, elev_init, ks, average_size, dt, t_end, friction='nikuradse', friction_coef=0, fluc_bcs=False, viscosity=10**(-6), diffusivity=0.15):
@@ -179,16 +180,14 @@ def morphological(boundary_conditions_fn, morfac, morfac_transport, suspendedloa
 
     def update_forcings_tracer(t_new):
 
-        tracer_list.append(min(solver_obj.fields.tracer_2d.dat.data[:]))
-
         # update bathymetry
-        old_bathymetry_2d.assign(bathymetry_2d)
+        old_bathymetry_2d.interpolate(bathymetry_2d)
 
         # extract new elevation and velocity and project onto CG space
         uv1, elev1 = solver_obj.fields.solution_2d.split()
         uv_cg.project(uv1)
         elev_cg.project(elev1)
-        depth.project(elev_cg + old_bathymetry_2d)
+        depth.interpolate(elev_cg + old_bathymetry_2d)
 
         horizontal_velocity.interpolate(uv_cg[0])
         vertical_velocity.interpolate(uv_cg[1])
@@ -203,12 +202,12 @@ def morphological(boundary_conditions_fn, morfac, morfac_transport, suspendedloa
                 exec('constant_out' + str(k) + '.assign(' + str(out_fn[k]) + ')')
 
         # update bedfriction
-        hc.interpolate(th.conditional(depth > 0.001, depth, 0.001))
-        aux.assign(th.conditional(11.036*hc/ks > 1.001, 11.036*hc/ks, 1.001))
-        qfc.assign(2/(th.ln(aux)/0.4)**2)
+        hc = th.conditional(depth > 0.001, depth, 0.001)
+        aux = th.conditional(11.036*hc/ks > 1.001, 11.036*hc/ks, 1.001)
+        qfc = 2/(th.ln(aux)/0.4)**2
 
         # calculate skin friction coefficient
-        hclip.interpolate(th.conditional(ksp > depth, ksp, depth))
+        hclip = th.conditional(ksp > depth, ksp, depth)
         cfactor.interpolate(th.conditional(depth > ksp, 2*((2.5*th.ln(11.036*hclip/ksp))**(-2)), th.Constant(0.0)))
 
         if morfac_transport:
@@ -229,68 +228,33 @@ def morphological(boundary_conditions_fn, morfac, morfac_transport, suspendedloa
                 z_n.assign(old_bathymetry_2d)
 
                 # mu - ratio between skin friction and normal friction
-                mu.assign(th.conditional(qfc > 0, cfactor/qfc, 0))
+                mu.interpolate(th.conditional(qfc > 0, cfactor/qfc, 0))
 
                 # bed shear stress
-                unorm.interpolate((horizontal_velocity**2) + (vertical_velocity**2))
+                unorm = ((horizontal_velocity**2) + (vertical_velocity**2))
                 TOB.interpolate(1000*0.5*qfc*unorm)
 
                 # calculate gradient of bed (noting bathymetry is -bed)
                 dzdx.interpolate(old_bathymetry_2d.dx(0))
                 dzdy.interpolate(old_bathymetry_2d.dx(1))
 
-                if sediment_slide:
-                    # add component to bedload transport to ensure the slope angle does not exceed a certain value
-
-                    # calculate normal to the bed
-                    nx.interpolate(dzdx/th.sqrt(1 + (dzdx**2 + dzdy**2)))
-                    ny.interpolate(dzdy/th.sqrt(1 + (dzdx**2 + dzdy**2)))
-                    nz.interpolate(1/th.sqrt(1 + (dzdx**2 + dzdy**2)))
-
-                    sinbeta.interpolate(th.sqrt(1 - (nz**2)))
-                    betaangle.interpolate(th.asin(sinbeta))
-                    tanbeta.assign(sinbeta/nz)
-
-                    # calculating magnitude of added component
-                    qaval.assign(th.conditional(tanbeta-tanphi > 0, (1-porosity)*0.5*(L**2)*(tanbeta - tanphi)/(th.cos(betaangle*dt*morfac)), 0))
-                    # multiplying by direction
-                    alphaconst.interpolate(th.conditional(sinbeta > 0, - qaval*(nz**2)/sinbeta, 0))
-
-                    # deriving the weak form of this extra component to be added to the finite element formulation of exner equation
-                    grad_test = th.grad(v)
-                    diff_tensor = th.as_matrix([[alphaconst, 0, ], [0, alphaconst, ]])
-                    diff_flux = th.dot(diff_tensor, th.grad(-old_bathymetry_2d))
-
-                    f = th.inner(grad_test, diff_flux)*(fire.dx)
-
-                    degree_h = P1_2d.ufl_element().degree()
-                    sigma = 5.0*degree_h*(degree_h + 1)/fire.CellSize(mesh2d)
-                    if degree_h == 0:
-                        sigma = 1.5 / fire.CellSize(mesh2d)
-
-                    alphaavg = th.avg(sigma)
-                    ds_interior = fire.dS
-                    f += -alphaavg*th.inner(th.jump(v, n), th.dot(th.avg(diff_tensor), th.jump(z_n, n)))*ds_interior
-                    f += -th.inner(th.avg(th.dot(diff_tensor, th.grad(v))), th.jump(z_n, n))*ds_interior
-                    f += -th.inner(th.jump(v, n), th.avg(th.dot(diff_tensor, th.grad(z_n))))*ds_interior
-                else:
-                    # initialise exner equation if not already initialised in sediment slide
-                    f = 0
+                # initialise exner equation if not already initialised in sediment slide
+                f = 0
 
                 if suspendedload:
                     # source term
 
                     # deposition flux - calculating coefficient to account for stronger conc at bed
-                    B.interpolate(th.conditional(a > depth, a/a, a/depth))
-                    ustar.interpolate(th.sqrt(0.5*qfc*unorm))
-                    exp1.assign(th.conditional((th.conditional((settling_velocity/(0.4*ustar)) - 1 > 0, (settling_velocity/(0.4*ustar)) - 1, -(settling_velocity/(0.4*ustar)) + 1)) > 10**(-4), th.conditional((settling_velocity/(0.4*ustar)) - 1 > 3, 3, (settling_velocity/(0.4*ustar))-1), 0))
-                    coefftest.assign(th.conditional((th.conditional((settling_velocity/(0.4*ustar)) - 1 > 0, (settling_velocity/(0.4*ustar)) - 1, -(settling_velocity/(0.4*ustar)) + 1)) > 10**(-4), B*(1-B**exp1)/exp1, -B*th.ln(B)))
-                    coeff.assign(th.conditional(coefftest > 0, 1/coefftest, 0))
+                    B.interpolate(th.conditional(a > depth, th.Constant(1.0), a/depth))
+                    ustar = (th.sqrt(0.5*qfc*unorm))
+                    exp1 = (th.conditional((th.conditional((settling_velocity/(0.4*ustar)) - 1 > 0, (settling_velocity/(0.4*ustar)) - 1, -(settling_velocity/(0.4*ustar)) + 1)) > 10**(-4), th.conditional((settling_velocity/(0.4*ustar)) - 1 > 3, 3, (settling_velocity/(0.4*ustar))-1), 0))
+                    coefftest = (th.conditional((th.conditional((settling_velocity/(0.4*ustar)) - 1 > 0, (settling_velocity/(0.4*ustar)) - 1, -(settling_velocity/(0.4*ustar)) + 1)) > 10**(-4), B*(1-B**exp1)/exp1, -B*th.ln(B)))
+                    coeff.interpolate(th.conditional(coefftest > 0, 1/coefftest, 0))
 
                     if sus_form == 'vanrijn':
                         # erosion flux - above critical velocity bed is eroded
-                        s0.assign((th.conditional(1000*0.5*qfc*unorm*mu > 0, 1000*0.5*qfc*unorm*mu, 0) - taucr)/taucr)
-                        ceq.assign(0.015*(average_size/a) * ((th.conditional(s0 < 0, 0, s0))**(1.5))/(dstar**0.3))
+                        s0 = (th.conditional(1000*0.5*qfc*unorm*mu > 0, 1000*0.5*qfc*unorm*mu, 0) - taucr)/taucr
+                        ceq.interpolate(0.015*(average_size/a) * ((th.conditional(s0 < 0, 0, s0))**(1.5))/(dstar**0.3))
                     elif sus_form == 'soulsby':
                         ucr.interpolate(0.19*(average_size**0.1)*(th.ln(4*depth/d90)/th.ln(10)))
                         s0.assign(th.conditional((th.sqrt(unorm)-ucr)**2.4 > 0, (th.sqrt(unorm)-ucr)**2.4, 0))
@@ -299,28 +263,30 @@ def morphological(boundary_conditions_fn, morfac, morfac_transport, suspendedloa
                         print('Unrecognised suspended sediment transport formula. Please choose "vanrijn" or "soulsby"')
 
                     # calculate depth-averaged source term for sediment concentration equation
-                    source.interpolate(-(settling_velocity*coeff*solver_obj.fields.tracer_2d/depth) + (settling_velocity*ceq/depth))
+                    depo.interpolate(settling_velocity * coeff)
+                    ero.interpolate(settling_velocity * ceq)
+                    source.interpolate((-(depo*solver_obj.fields.tracer_2d) + ero)/depth)
                     # update sediment rate to ensure equilibrium at inflow
                     sediment_rate.assign(ceq.at([0, 0])/coeff.at([0, 0]))
-
+                    
                     if convectivevel:
                         # correction factor to advection velocity in sediment concentration equation
-                        Bconv.interpolate(th.conditional(depth > 1.1*ksp, ksp/depth, ksp/(1.1*ksp)))
-                        Aconv.interpolate(th.conditional(depth > 1.1*a, a/depth, a/(1.1*a)))
+                        Bconv = (th.conditional(depth > 1.1*ksp, ksp/depth, ksp/(1.1*ksp)))
+                        Aconv = (th.conditional(depth > 1.1*a, a/depth, a/(1.1*a)))
 
                         # take max of value calculated either by ksp or depth
-                        Amax.assign(th.conditional(Aconv > Bconv, Aconv, Bconv))
+                        Amax = (th.conditional(Aconv > Bconv, Aconv, Bconv))
 
-                        r1conv.assign(1 - (1/0.4)*th.conditional(settling_velocity/ustar < 1, settling_velocity/ustar, 1))
+                        r1conv = (1 - (1/0.4)*th.conditional(settling_velocity/ustar < 1, settling_velocity/ustar, 1))
 
-                        Ione.assign(th.conditional(r1conv > 10**(-8), (1 - Amax**r1conv)/r1conv, th.conditional(r1conv < - 10**(-8), (1 - Amax**r1conv)/r1conv, th.ln(Amax))))
+                        Ione = (th.conditional(r1conv > 10**(-8), (1 - Amax**r1conv)/r1conv, th.conditional(r1conv < - 10**(-8), (1 - Amax**r1conv)/r1conv, th.ln(Amax))))
 
-                        Itwo.assign(th.conditional(r1conv > 10**(-8), -(Ione + (th.ln(Amax)*(Amax**r1conv)))/r1conv, th.conditional(r1conv < - 10**(-8), -(Ione + (th.ln(Amax)*(Amax**r1conv)))/r1conv, -0.5*th.ln(Amax)**2)))
+                        Itwo = (th.conditional(r1conv > 10**(-8), -(Ione + (th.ln(Amax)*(Amax**r1conv)))/r1conv, th.conditional(r1conv < - 10**(-8), -(Ione + (th.ln(Amax)*(Amax**r1conv)))/r1conv, -0.5*th.ln(Amax)**2)))
 
-                        alpha.assign(-(Itwo - (th.ln(Amax) - th.ln(30))*Ione)/(Ione * ((th.ln(Amax) - th.ln(30)) + 1)))
+                        alpha = (-(Itwo - (th.ln(Amax) - th.ln(30))*Ione)/(Ione * ((th.ln(Amax) - th.ln(30)) + 1)))
 
                         # final correction factor
-                        alphatest2.assign(th.conditional(th.conditional(alpha > 1, 1, alpha) < 0, 0, th.conditional(alpha > 1, 1, alpha)))
+                        alphatest2.interpolate(th.conditional(th.conditional(alpha > 1, 1, alpha) < 0, 0, th.conditional(alpha > 1, 1, alpha)))
                     else:
                         alphatest2.assign(th.Constant(1.0))
 
@@ -340,11 +306,11 @@ def morphological(boundary_conditions_fn, morfac, morfac_transport, suspendedloa
 
                     if angle_correction:
                         # slope effect angle correction due to gravity
-                        tt1.interpolate(th.conditional(1000*0.5*qfc*unorm > 10**(-10), th.sqrt(cparam/(1000*0.5*qfc*unorm)), th.sqrt(cparam/(10**(-10)))))
+                        tt1 = (th.conditional(1000*0.5*qfc*unorm > 10**(-10), th.sqrt(cparam/(1000*0.5*qfc*unorm)), th.sqrt(cparam/(10**(-10)))))
                         # add on a factor of the bed gradient to the normal
-                        aa.assign(salfa + tt1*dzdy)
-                        bb.assign(calfa + tt1*dzdx)
-                        norm.assign(th.conditional(th.sqrt(aa**2 + bb**2) > 10**(-10), th.sqrt(aa**2 + bb**2), 10**(-10)))
+                        aa = (salfa + tt1*dzdy)
+                        bb = (calfa + tt1*dzdx)
+                        norm = (th.conditional(th.sqrt(aa**2 + bb**2) > 10**(-10), th.sqrt(aa**2 + bb**2), 10**(-10)))
                         # we use z_n1 and equals so that we can use an implicit method in Exner
                         calfamod = (calfa + (tt1*z_n1.dx(0)))/norm
                         salfamod = (salfa + (tt1*z_n1.dx(1)))/norm
@@ -379,10 +345,10 @@ def morphological(boundary_conditions_fn, morfac, morfac_transport, suspendedloa
 
                     if bed_form == 'meyer':
                         # implement meyer-peter-muller bedload transport formula
-                        thetaprime.interpolate(mu*(1000*0.5*qfc*unorm)/((2650-1000)*9.81*average_size))
+                        thetaprime = (mu*(1000*0.5*qfc*unorm)/((2650-1000)*9.81*average_size))
 
                         # if velocity above a certain critical value then transport occurs
-                        phi.assign(th.conditional(thetaprime < thetacr, 0, 8*(thetaprime-thetacr)**1.5))
+                        phi.interpolate(th.conditional(thetaprime < thetacr, 0, 8*(thetaprime-thetacr)**1.5))
 
                         # bedload transport flux with magnitude correction
                         qb_total = slopecoef*phi*th.sqrt(g*(2650/1000 - 1)*average_size**3)
@@ -417,7 +383,7 @@ def morphological(boundary_conditions_fn, morfac, morfac_transport, suspendedloa
                 if suspendedload:
                     # add suspended sediment transport to exner equation multiplied by depth as the exner equation is not depth-averaged
 
-                    qbsourcedepth.interpolate(source*depth)
+                    qbsourcedepth.interpolate(-(depo*solver_obj.fields.tracer_2d) + ero)
                     f += - (qbsourcedepth*v)*fire.dx
 
                 # solve exner equation using finite element methods
@@ -527,7 +493,7 @@ def morphological(boundary_conditions_fn, morfac, morfac_transport, suspendedloa
 
     elev_cg = th.Function(V).interpolate(elev_init)
 
-    depth = th.Function(V).project(elev_cg + bathymetry_2d)
+    depth = th.Function(V).interpolate(elev_cg + bathymetry_2d)
 
     old_bathymetry_2d = th.Function(V).interpolate(bathymetry_2d)
 
@@ -535,17 +501,17 @@ def morphological(boundary_conditions_fn, morfac, morfac_transport, suspendedloa
     vertical_velocity = th.Function(V).interpolate(uv_cg[1])
 
     # define bed friction
-    hc = th.Function(P1_2d).interpolate(th.conditional(depth > 0.001, depth, 0.001))
-    aux = th.Function(P1_2d).interpolate(th.conditional(11.036*hc/ks > 1.001, 11.036*hc/ks, 1.001))
-    qfc = th.Function(P1_2d).interpolate(2/(th.ln(aux)/0.4)**2)
+    hc = th.conditional(depth > 0.001, depth, 0.001)
+    aux = th.conditional(11.036*hc/ks > 1.001, 11.036*hc/ks, 1.001)
+    qfc = 2/(th.ln(aux)/0.4)**2
     # skin friction coefficient
-    hclip = th.Function(P1_2d).interpolate(th.conditional(ksp > depth, ksp, depth))
+    hclip = th.conditional(ksp > depth, ksp, depth)
     cfactor = th.Function(P1_2d).interpolate(th.conditional(depth > ksp, 2*((2.5*th.ln(11.036*hclip/ksp))**(-2)), th.Constant(0.0)))
     # mu - ratio between skin friction and normal friction
     mu = th.Function(P1_2d).interpolate(th.conditional(qfc > 0, cfactor/qfc, 0))
 
     # calculate bed shear stress
-    unorm = th.Function(P1_2d).interpolate((horizontal_velocity**2) + (vertical_velocity**2))
+    unorm = (horizontal_velocity**2) + (vertical_velocity**2)
     TOB = th.Function(V).interpolate(1000*0.5*qfc*unorm)
 
     # define bed gradient
@@ -571,15 +537,15 @@ def morphological(boundary_conditions_fn, morfac, morfac_transport, suspendedloa
 
     if suspendedload:
         # deposition flux - calculating coefficient to account for stronger conc at bed
-        B = th.Function(P1_2d).interpolate(th.conditional(a > depth, a/a, a/depth))
-        ustar = th.Function(P1_2d).interpolate(th.sqrt(0.5*qfc*unorm))
-        exp1 = th.Function(P1_2d).interpolate(th.conditional((th.conditional((settling_velocity/(0.4*ustar)) - 1 > 0, (settling_velocity/(0.4*ustar)) - 1, -(settling_velocity/(0.4*ustar)) + 1)) > 10**(-4), th.conditional((settling_velocity/(0.4*ustar)) - 1 > 3, 3, (settling_velocity/(0.4*ustar))-1), 0))
-        coefftest = th.Function(P1_2d).interpolate(th.conditional((th.conditional((settling_velocity/(0.4*ustar)) - 1 > 0, (settling_velocity/(0.4*ustar)) - 1, -(settling_velocity/(0.4*ustar)) + 1)) > 10**(-4), B*(1-B**exp1)/exp1, -B*th.ln(B)))
+        B = th.Function(P1_2d).interpolate(th.conditional(a > depth, th.Constant(1.0), a/depth))
+        ustar = th.sqrt(0.5*qfc*unorm)
+        exp1 = th.conditional((th.conditional((settling_velocity/(0.4*ustar)) - 1 > 0, (settling_velocity/(0.4*ustar)) - 1, -(settling_velocity/(0.4*ustar)) + 1)) > 10**(-4), th.conditional((settling_velocity/(0.4*ustar)) - 1 > 3, 3, (settling_velocity/(0.4*ustar))-1), 0)
+        coefftest = th.conditional((th.conditional((settling_velocity/(0.4*ustar)) - 1 > 0, (settling_velocity/(0.4*ustar)) - 1, -(settling_velocity/(0.4*ustar)) + 1)) > 10**(-4), B*(1-B**exp1)/exp1, -B*th.ln(B))
         coeff = th.Function(P1_2d).interpolate(th.conditional(coefftest > 0, 1/coefftest, 0))
 
         if sus_form == 'vanrijn':
             # erosion flux - above critical velocity bed is eroded
-            s0 = th.Function(P1_2d).interpolate((th.conditional(1000*0.5*qfc*unorm*mu > 0, 1000*0.5*qfc*unorm*mu, 0) - taucr)/taucr)
+            s0 = (th.conditional(1000*0.5*qfc*unorm*mu > 0, 1000*0.5*qfc*unorm*mu, 0) - taucr)/taucr
             ceq = th.Function(P1_2d).interpolate(0.015*(average_size/a) * ((th.conditional(s0 < 0, 0, s0))**(1.5))/(dstar**0.3))
         elif sus_form == 'soulsby':
             if d90 == 0:
@@ -598,30 +564,32 @@ def morphological(boundary_conditions_fn, morfac, morfac_transport, suspendedloa
         # update sediment rate to ensure equilibrium at inflow
 
         sediment_rate = th.Constant(ceq.at([0, 0])/coeff.at([0, 0]))
-        testtracer = th.Function(P1_2d).interpolate(ceq/coeff)
+        testtracer = th.Function(P1_2d).project(ceq/coeff)
 
         # calculate depth-averaged source term for sediment concentration equation
-        source = th.Function(P1_2d).interpolate(-(settling_velocity*coeff*sediment_rate/depth) + (settling_velocity*ceq/depth))
+        depo = th.Function(P1_2d).interpolate(settling_velocity * coeff)
+        ero = th.Function(P1_2d).interpolate(settling_velocity * ceq)        
+        source = th.Function(P1_2d).interpolate((-(depo*testtracer) + ero)/depth)
 
         # add suspended sediment transport to exner equation multiplied by depth as the exner equation is not depth-averaged
-        qbsourcedepth = th.Function(V).interpolate(source*depth)
+        qbsourcedepth = th.Function(P1_2d).interpolate(-(depo*testtracer) + ero)
 
         if convectivevel:
             # correction factor to advection velocity in sediment concentration equation
 
-            Bconv = th.Function(P1_2d).interpolate(th.conditional(depth > 1.1*ksp, ksp/depth, ksp/(1.1*ksp)))
-            Aconv = th.Function(P1_2d).interpolate(th.conditional(depth > 1.1*a, a/depth, a/(1.1*a)))
+            Bconv = th.conditional(depth > 1.1*ksp, ksp/depth, ksp/(1.1*ksp))
+            Aconv = th.conditional(depth > 1.1*a, a/depth, a/(1.1*a))
 
             # take max of value calculated either by ksp or depth
-            Amax = th.Function(P1_2d).interpolate(th.conditional(Aconv > Bconv, Aconv, Bconv))
+            Amax = th.conditional(Aconv > Bconv, Aconv, Bconv)
 
-            r1conv = th.Function(P1_2d).interpolate(1 - (1/0.4)*th.conditional(settling_velocity/ustar < 1, settling_velocity/ustar, 1))
+            r1conv = 1 - (1/0.4)*th.conditional(settling_velocity/ustar < 1, settling_velocity/ustar, 1)
 
-            Ione = th.Function(P1_2d).interpolate(th.conditional(r1conv > 10**(-8), (1 - Amax**r1conv)/r1conv, th.conditional(r1conv < - 10**(-8), (1 - Amax**r1conv)/r1conv, th.ln(Amax))))
+            Ione = th.conditional(r1conv > 10**(-8), (1 - Amax**r1conv)/r1conv, th.conditional(r1conv < - 10**(-8), (1 - Amax**r1conv)/r1conv, th.ln(Amax)))
 
-            Itwo = th.Function(P1_2d).interpolate(th.conditional(r1conv > 10**(-8), -(Ione + (th.ln(Amax)*(Amax**r1conv)))/r1conv, th.conditional(r1conv < - 10**(-8), -(Ione + (th.ln(Amax)*(Amax**r1conv)))/r1conv, -0.5*th.ln(Amax)**2)))
+            Itwo = th.conditional(r1conv > 10**(-8), -(Ione + (th.ln(Amax)*(Amax**r1conv)))/r1conv, th.conditional(r1conv < - 10**(-8), -(Ione + (th.ln(Amax)*(Amax**r1conv)))/r1conv, -0.5*th.ln(Amax)**2))
 
-            alpha = th.Function(P1_2d).interpolate(-(Itwo - (th.ln(Amax) - th.ln(30))*Ione)/(Ione * ((th.ln(Amax) - th.ln(30)) + 1)))
+            alpha = -(Itwo - (th.ln(Amax) - th.ln(30))*Ione)/(Ione * ((th.ln(Amax) - th.ln(30)) + 1))
 
             # final correction factor
             alphatest2 = th.Function(P1_2d).interpolate(th.conditional(th.conditional(alpha > 1, 1, alpha) < 0, 0, th.conditional(alpha > 1, 1, alpha)))
@@ -642,11 +610,11 @@ def morphological(boundary_conditions_fn, morfac, morfac_transport, suspendedloa
 
         if angle_correction:
             # slope effect angle correction due to gravity
-            tt1 = th.Function(V).interpolate(th.conditional(1000*0.5*qfc*unorm > 10**(-10), th.sqrt(cparam/(1000*0.5*qfc*unorm)), th.sqrt(cparam/(10**(-10)))))
+            tt1 = th.conditional(1000*0.5*qfc*unorm > 10**(-10), th.sqrt(cparam/(1000*0.5*qfc*unorm)), th.sqrt(cparam/(10**(-10))))
             # add on a factor of the bed gradient to the normal
-            aa = th.Function(V).interpolate(salfa + tt1*dzdy)
-            bb = th.Function(V).interpolate(calfa + tt1*dzdx)
-            norm = th.Function(V).interpolate(th.conditional(th.sqrt(aa**2 + bb**2) > 10**(-10), th.sqrt(aa**2 + bb**2), 10**(-10)))
+            aa = salfa + tt1*dzdy
+            bb = calfa + tt1*dzdx
+            norm = th.conditional(th.sqrt(aa**2 + bb**2) > 10**(-10), th.sqrt(aa**2 + bb**2), 10**(-10))
 
         if seccurrent:
             # accounts for helical flow effect in a curver channel
@@ -668,7 +636,7 @@ def morphological(boundary_conditions_fn, morfac, morfac_transport, suspendedloa
 
         if bed_form == 'meyer':
             # implement meyer-peter-muller bedload transport formula
-            thetaprime = th.Function(V).interpolate(mu*(1000*0.5*qfc*unorm)/((2650-1000)*9.81*average_size))
+            thetaprime = mu*(1000*0.5*qfc*unorm)/((2650-1000)*9.81*average_size)
 
             # if velocity above a certain critical value then transport occurs
             phi = th.Function(V).interpolate(th.conditional(thetaprime < thetacr, 0, 8*(thetaprime-thetacr)**1.5))
@@ -721,6 +689,7 @@ def morphological(boundary_conditions_fn, morfac, morfac_transport, suspendedloa
     if not hasattr(options.timestepper_options, 'use_automatic_timestep'):
         options.timestep = dt
 
+    
     # set boundary conditions
     swe_bnd, left_bnd_id, right_bnd_id, in_constant, out_constant, left_string, right_string = boundary_conditions_fn(orig_bathymetry, flag='morpho')
 
@@ -743,9 +712,9 @@ def morphological(boundary_conditions_fn, morfac, morfac_transport, suspendedloa
             str2 += "'" + str(right_string[i]) + "': constant_out" + str(i) + ","
         str2 = str2[0:len(str2)-1] + "}"
         exec('swe_bnd[right_bnd_id] = ' + str2)
-
+        
     solver_obj.bnd_functions['shallow_water'] = swe_bnd
-
+    
     if suspendedload:
         solver_obj.bnd_functions['tracer'] = {1: {'value': sediment_rate}}
 
@@ -755,8 +724,7 @@ def morphological(boundary_conditions_fn, morfac, morfac_transport, suspendedloa
     else:
         # set initial conditions
         solver_obj.assign_initial_conditions(uv=uv_init, elev=elev_init)
-
-    solver_obj.iterate(update_forcings=update_forcings_tracer)
+        
 
     return solver_obj, update_forcings_tracer, diff_bathy, diff_bathy_file
 
@@ -799,3 +767,7 @@ def initialise_fields(mesh2d, inputdir, outputdir,):
         th.File(outputdir + "/velocity_imported.pvd").write(uv_init)
         chk.close()
         return elev_init, uv_init,
+    
+    plex = elev.function_space().mesh()._plex
+    viewer = PETSc.Viewer().createHDF5(inputdir + '/myplex.h5', 'w')
+    viewer(plex)    

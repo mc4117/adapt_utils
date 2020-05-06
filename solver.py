@@ -294,7 +294,7 @@ class SteadyProblem():
         if adjoint:
             self.adjoint_solution = val
         else:
-            self.solution = val
+            self.solution = project(val, val.function_space())
         # self.get_solution(adjoint).rename(name)
 
     def set_error(self, val, adjoint=False):
@@ -804,8 +804,12 @@ class SteadyProblem():
 
             # Create a temporary Problem based on the new mesh
             am_copy = self.am.copy()
+            
+            if hasattr(self.op, 'input_dir'):
+                op_copy = type(self.op)(mesh=am_copy.mesh, input_dir = self.op.input_dir)
+            else:
+                op_copy = type(self.op)(mesh=am_copy.mesh)
 
-            op_copy = type(self.op)(mesh=am_copy.mesh)
             op_copy.update(self.op)
 
             tmp = type(self)(op_copy, mesh=am_copy.mesh, discrete_adjoint=self.discrete_adjoint,

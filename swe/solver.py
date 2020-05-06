@@ -38,7 +38,7 @@ class SteadyShallowWaterProblem(SteadyProblem):
         self.fields['bathymetry'] = self.op.set_bathymetry(self.P1DG)
         self.fields['inflow'] = self.op.set_inflow(self.P1_vec)
         self.fields['coriolis'] = self.op.set_coriolis(self.P1)
-        self.fields['quadratic_drag_coefficient'] = self.op.set_quadratic_drag_coefficient(self.P1)
+        self.fields['quadratic_drag_coefficient'] = self.op.set_quadratic_drag_coefficient(self.P1DG)
         self.fields['manning_drag_coefficient'] = self.op.set_manning_drag_coefficient(self.P1)
 
     def create_solutions(self):
@@ -459,7 +459,7 @@ class UnsteadyShallowWaterProblem(UnsteadyProblem):
             self.fields['bathymetry'] = self.op.set_bathymetry(self.P1DG)
         self.fields['inflow'] = self.op.set_inflow(self.P1_vec)
         self.fields['coriolis'] = self.op.set_coriolis(self.P1)
-        self.fields['quadratic_drag_coefficient'] = self.op.set_quadratic_drag_coefficient(self.P1)
+        self.fields['quadratic_drag_coefficient'] = self.op.set_quadratic_drag_coefficient(self.P1DG)
         self.fields['manning_drag_coefficient'] = self.op.set_manning_drag_coefficient(self.P1)
         self.fields['source'] = self.op.source
 
@@ -535,11 +535,12 @@ class UnsteadyShallowWaterProblem(UnsteadyProblem):
 
         self.solver_obj.iterate(update_forcings=self.op.get_update_forcings(self.solver_obj),
                                 export_func=self.op.get_export_func(self.solver_obj))
-        self.solution = self.solver_obj.fields.solution_2d
 
         old_mesh = Mesh(Function(self.mesh.coordinates))
         P1DG_old = FunctionSpace(old_mesh, "DG", 1)
         P1_old = FunctionSpace(old_mesh, "CG", 1)
+        
+        self.solution = self.solver_obj.fields.solution_2d
 
         if isinstance(self.solver_obj.fields.bathymetry_2d, Constant):
             solution_bathymetry = Constant(self.solver_obj.fields.bathymetry_2d)
@@ -558,7 +559,7 @@ class UnsteadyShallowWaterProblem(UnsteadyProblem):
         op = self.op
 
         # Use appropriate bathymetry
-        if self.solution_old_bathymetry is not None:
+        if hasattr(self, 'solution_old_bathymetry') and self.solution_old_bathymetry is not None:
             if isinstance(self.solution_old_bathymetry, Constant):
                 op.bathymetry = Constant(self.solution_old_bathymetry)
             else:
@@ -574,7 +575,7 @@ class UnsteadyShallowWaterProblem(UnsteadyProblem):
         # Initial conditions
         u_interp, eta_interp = self.solution.split()
         if op.solve_tracer:
-            if self.solution_old_tracer is not None:
+            if hasattr(self, 'solution_old_tracer') and self.solution_old_tracer is not None:
                 self.tracer_interp = project(self.solution_old_tracer, self.P1DG)
             else:
                 self.tracer_interp = project(self.op.tracer_init, self.P1DG)

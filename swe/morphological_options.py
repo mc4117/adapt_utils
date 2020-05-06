@@ -19,6 +19,8 @@ class MorphOptions(ShallowWaterOptions):
         self.wetting_and_drying = False
         self.conservative = False
         self.depth_integrated = False
+        self.suspended = True
+        self.bedload = True
         super(MorphOptions, self).__init__(**kwargs)
 
     def set_tracer_init(self, fs):
@@ -59,22 +61,18 @@ class MorphOptions(ShallowWaterOptions):
                 self.settling_velocity = Constant((10*self.base_viscosity/self.average_size)*(sqrt(1 + 0.01*((((2650/1000) - 1)*9.81*(self.average_size**3))/(self.base_viscosity**2)))-1))
             else:
                 self.settling_velocity = Constant(1.1*sqrt(9.81*self.average_size*((2650/1000) - 1)))
-        self.uv_d = project(self.uv_d, P1DG_vec)
-        self.eta_d = project(self.eta_d, P1DG)
 
-        self.u_cg = project(self.uv_d, P1_vec)
-        self.horizontal_velocity = project(self.u_cg[0], P1)
-        self.vertical_velocity = project(self.u_cg[1], P1)
-        self.elev_cg = project(self.eta_d, P1)
+        self.u_cg = interpolate(self.uv_d, P1_vec)
+        self.horizontal_velocity = interpolate(self.u_cg[0], P1)
+        self.vertical_velocity = interpolate(self.u_cg[1], P1)
+        self.elev_cg = interpolate(self.eta_d, P1)
+        
+        self.unorm = ((self.horizontal_velocity**2) + (self.vertical_velocity**2))
 
         if self.t_old.dat.data[:] == 0.0:
             self.set_bathymetry(P1)
-        else:
-            self.bathymetry = interpolate(self.bathymetry, P1)
 
         self.depth = interpolate(self.elev_cg + self.bathymetry, P1)
-
-        self.unorm = interpolate(self.horizontal_velocity**2 + self.vertical_velocity**2, P1DG)
 
         self.hc = conditional(self.depth > 0.001, self.depth, 0.001)
         self.aux = conditional(11.036*self.hc/self.ks > 1.001, 11.036*self.hc/self.ks, 1.001)
@@ -83,21 +81,22 @@ class MorphOptions(ShallowWaterOptions):
         self.TOB = interpolate(1000*0.5*self.qfc*self.unorm, P1)
 
         # skin friction coefficient
+        self.cfactor = interpolate(self.get_cfactor(), P1DG)
 
-        self.cfactor = self.get_cfactor()
         # mu - ratio between skin friction and normal friction
         self.mu = interpolate(conditional(self.qfc > 0, self.cfactor/self.qfc, 0), P1DG)
 
-        self.a = (self.ks)/2
-        self.B = interpolate(conditional(self.a > self.depth, 1, self.a/self.depth), P1DG)
+        self.a = Constant((self.ks)/2)
+        
+        self.B = interpolate(conditional(self.a > self.depth, Constant(1.0), self.a/self.depth), P1DG)
         self.ustar = sqrt(0.5*self.qfc*self.unorm)
         self.exp1 = conditional((conditional((self.settling_velocity/(0.4*self.ustar)) - 1 > 0, (self.settling_velocity/(0.4*self.ustar)) - 1, -(self.settling_velocity/(0.4*self.ustar)) + 1)) > 10**(-4), conditional((self.settling_velocity/(0.4*self.ustar)) - 1 > 3, 3, (self.settling_velocity/(0.4*self.ustar))-1), 0)
         self.coefftest = conditional((conditional((self.settling_velocity/(0.4*self.ustar)) - 1 > 0, (self.settling_velocity/(0.4*self.ustar)) - 1, -(self.settling_velocity/(0.4*self.ustar)) + 1)) > 10**(-4), self.B*(1-self.B**self.exp1)/self.exp1, -self.B*ln(self.B))
         self.coeff = interpolate(conditional(self.coefftest > 0, 1/self.coefftest, 0), P1DG)
 
         # erosion flux - for vanrijn
-        self.s0 = (conditional(1000*0.5*self.qfc*self.unorm*self.mu > 0, 1000*0.5*self.qfc*self.unorm*self.mu, 0) - self.taucr)/self.taucr
-        self.ceq = interpolate(0.015*(self.average_size/self.a) * ((conditional(self.s0 < 0, 0, self.s0))**(1.5))/(self.dstar**0.3), P1DG)
+        s0 = (conditional(1000*0.5*self.qfc*self.unorm*self.mu > 0, 1000*0.5*self.qfc*self.unorm*self.mu, 0) - self.taucr)/self.taucr
+        self.ceq = interpolate(0.015*(self.average_size/self.a) * ((conditional(s0 < 0, 0, s0))**(1.5))/(self.dstar**0.3), P1DG)
 
         if self.conservative:
             self.tracer_init_value = Constant(self.depth.at([0, 0])*self.ceq.at([0, 0])/self.coeff.at([0, 0]))
@@ -120,13 +119,13 @@ class MorphOptions(ShallowWaterOptions):
                 self.sink = interpolate(self.depo/self.depth, P1DG)
                 self.source = interpolate(self.ero/self.depth, P1DG)
             else:
-                if self.t_old.dat.data[:] == 0:
+                if self.t_old.dat.data[:] == 0.0:
                     self.source = interpolate((-(self.depo*self.tracer_init) + self.ero)/self.depth, P1DG)
                     self.sink = None
                 else:
                     self.source = interpolate((-(self.depo*tracer) + self.ero)/self.depth, P1DG)
 
-        if self.t_old.dat.data[:] == 0:
+        if self.t_old.dat.data[:] == 0.0:
             if self.conservative:
                 self.qbsourcedepth = interpolate(-(self.depo*self.tracer_init/self.depth) + self.ero, P1DG)
             else:
@@ -176,7 +175,7 @@ class MorphOptions(ShallowWaterOptions):
         self.calfa = interpolate(self.horizontal_velocity/sqrt(self.unorm), P1)
         self.salfa = interpolate(self.vertical_velocity/sqrt(self.unorm), P1)
 
-        self.beta = 1.3
+        self.beta = Constant(1.3)
 
         self.surbeta2 = Constant(1/1.5)
         self.cparam = Constant((2650-1000)*9.81*self.average_size*(self.surbeta2**2))
@@ -189,32 +188,32 @@ class MorphOptions(ShallowWaterOptions):
 
         if self.angle_correction:
             # slope effect angle correction due to gravity
-            self.tt1 = conditional(1000*0.5*self.qfc*self.unorm > 10**(-10), sqrt(self.cparam/(1000*0.5*self.qfc*self.unorm)), sqrt(self.cparam/(10**(-10))))
+            tt1 = conditional(1000*0.5*self.qfc*self.unorm > 10**(-10), sqrt(self.cparam/(1000*0.5*self.qfc*self.unorm)), sqrt(self.cparam/(10**(-10))))
             # add on a factor of the bed gradient to the normal
-            self.aa = self.salfa + self.tt1*self.dzdy
-            self.bb = self.calfa + self.tt1*self.dzdx
-            self.norm = conditional(sqrt(self.aa**2 + self.bb**2) > 10**(-10), sqrt(self.aa**2 + self.bb**2), 10**(-10))
+            aa = self.salfa + tt1*self.dzdy
+            bb = self.calfa + tt1*self.dzdx
+            norm = conditional(sqrt(aa**2 + bb**2) > 10**(-10), sqrt(aa**2 + bb**2), 10**(-10))
 
         # implement meyer-peter-muller bedload transport formula
-        self.thetaprime = self.mu*(1000*0.5*self.qfc*self.unorm)/((2650-1000)*9.81*self.average_size)
+        thetaprime = self.mu*(1000*0.5*self.qfc*self.unorm)/((2650-1000)*9.81*self.average_size)
 
         # if velocity above a certain critical value then transport occurs
-        self.phi = interpolate(conditional(self.thetaprime < self.thetacr, 0, 8*(self.thetaprime-self.thetacr)**1.5), P1)
+        self.phi = interpolate(conditional(thetaprime < self.thetacr, 0, 8*(thetaprime-self.thetacr)**1.5), P1)
 
         self.z_n = Function(P1)
         self.z_n1 = Function(P1)
         self.v = TestFunction(P1)
         self.n = FacetNormal(mesh)
-        self.old_bathymetry_2d = Function(P1)
+        self.old_bathymetry_2d = Function(P1).interpolate(self.bathymetry)
 
     def update_key_hydro(self, solver_obj):
 
-        self.old_bathymetry_2d.assign(solver_obj.fields.bathymetry_2d)
-        self.z_n.interpolate(self.old_bathymetry_2d)
+        self.old_bathymetry_2d.interpolate(solver_obj.fields.bathymetry_2d)
+        self.z_n.assign(self.old_bathymetry_2d)
 
         self.uv1, self.eta = solver_obj.fields.solution_2d.split()
-        self.u_cg.interpolate(self.uv1)
-        self.elev_cg.interpolate(self.eta)
+        self.u_cg.project(self.uv1)
+        self.elev_cg.project(self.eta)
 
         # calculate gradient of bed (noting bathymetry is -bed)
         self.dzdx.interpolate(self.old_bathymetry_2d.dx(0))
@@ -228,39 +227,39 @@ class MorphOptions(ShallowWaterOptions):
             bathymetry_displacement = solver_obj.depth.wd_bathymetry_displacement
             self.depth.interpolate(self.elev_cg + bathymetry_displacement(self.eta) + self.bathymetry)
         else:
-            self.depth.interpolate(self.elev_cg + self.bathymetry)
+            self.depth.interpolate(self.elev_cg + self.old_bathymetry_2d)
 
         self.hc = conditional(self.depth > 0.001, self.depth, 0.001)
         self.aux = conditional(11.036*self.hc/self.ks > 1.001, 11.036*self.hc/self.ks, 1.001)
         self.qfc = 2/(ln(self.aux)/0.4)**2
 
-        # calculate skin friction coefficient
-        self.cfactor.interpolate(self.get_cfactor())
-
         if self.friction == 'nikuradse':
-            self.quadratic_drag_coefficient.project(self.get_cfactor())
+            self.quadratic_drag_coefficient.interpolate(self.get_cfactor())
+            
+        self.cfactor.interpolate(self.get_cfactor())
 
         # mu - ratio between skin friction and normal friction
         self.mu.interpolate(conditional(self.qfc > 0, self.cfactor/self.qfc, 0))
 
         # bed shear stress
         self.unorm = ((self.horizontal_velocity**2) + (self.vertical_velocity**2))
-        self.TOB.project(1000*0.5*self.qfc*self.unorm)
+        self.TOB.interpolate(1000*0.5*self.qfc*self.unorm)
 
         self.f = (((1-self.porosity)*(self.z_n1 - self.z_n)/(self.dt*self.morfac))*self.v)*dx
 
     def update_suspended(self, solver_obj):
+
         P1DG = solver_obj.function_spaces.P1DG_2d
 
-        self.B.interpolate(conditional(self.a > self.depth, 1, self.a/self.depth))
+        self.B.interpolate(conditional(self.a > self.depth, Constant(1.0), self.a/self.depth))
         self.ustar = sqrt(0.5*self.qfc*self.unorm)
         self.exp1 = conditional((conditional((self.settling_velocity/(0.4*self.ustar)) - 1 > 0, (self.settling_velocity/(0.4*self.ustar)) - 1, -(self.settling_velocity/(0.4*self.ustar)) + 1)) > 10**(-4), conditional((self.settling_velocity/(0.4*self.ustar)) - 1 > 3, 3, (self.settling_velocity/(0.4*self.ustar))-1), 0)
         self.coefftest = conditional((conditional((self.settling_velocity/(0.4*self.ustar)) - 1 > 0, (self.settling_velocity/(0.4*self.ustar)) - 1, -(self.settling_velocity/(0.4*self.ustar)) + 1)) > 10**(-4), self.B*(1-self.B**self.exp1)/self.exp1, -self.B*ln(self.B))
         self.coeff.interpolate(conditional(self.coefftest > 0, 1/self.coefftest, 0))
 
         # erosion flux - van rijn
-        self.s0 = (conditional(1000*0.5*self.qfc*self.unorm*self.mu > 0, 1000*0.5*self.qfc*self.unorm*self.mu, 0) - self.taucr)/self.taucr
-        self.ceq.interpolate(0.015*(self.average_size/self.a) * ((conditional(self.s0 < 0, 0, self.s0))**(1.5))/(self.dstar**0.3))
+        s0 = (conditional(1000*0.5*self.qfc*self.unorm*self.mu > 0, 1000*0.5*self.qfc*self.unorm*self.mu, 0) - self.taucr)/self.taucr
+        self.ceq.interpolate(0.015*(self.average_size/self.a) * ((conditional(s0 < 0, 0, s0))**(1.5))/(self.dstar**0.3))
 
         if self.conservative:
             self.tracer_init_value.assign(self.depth.at([0, 0])*self.ceq.at([0, 0])/self.coeff.at([0, 0]))
@@ -268,6 +267,7 @@ class MorphOptions(ShallowWaterOptions):
             self.tracer_init_value.assign(self.ceq.at([0, 0])/self.coeff.at([0, 0]))
 
         self.depo, self.ero = self.set_source_tracer(P1DG, solver_obj)
+                
 
         if self.conservative:
             if self.depth_integrated:
@@ -286,7 +286,6 @@ class MorphOptions(ShallowWaterOptions):
             self.qbsourcedepth.interpolate(-(self.depo*solver_obj.fields.tracer_2d) + self.ero)
 
         if self.convective_vel_flag:
-
             # correction factor to advection velocity in sediment concentration equation
             self.Bconv = conditional(self.depth > 1.1*self.ksp, self.ksp/self.depth, self.ksp/(1.1*self.ksp))
             self.Aconv = conditional(self.depth > 1.1*self.a, self.a/self.depth, self.a/(1.1*self.a))
@@ -322,28 +321,28 @@ class MorphOptions(ShallowWaterOptions):
 
         if self.angle_correction:
             # slope effect angle correction due to gravity
-            self.tt1 = conditional(1000*0.5*self.qfc*self.unorm > 10**(-10), sqrt(self.cparam/(1000*0.5*self.qfc*self.unorm)), sqrt(self.cparam/(10**(-10))))
+            tt1 = conditional(1000*0.5*self.qfc*self.unorm > 10**(-10), sqrt(self.cparam/(1000*0.5*self.qfc*self.unorm)), sqrt(self.cparam/(10**(-10))))
             # add on a factor of the bed gradient to the normal
-            self.aa = self.salfa + self.tt1*self.dzdy
-            self.bb = self.calfa + self.tt1*self.dzdx
-            self.norm = conditional(sqrt(self.aa**2 + self.bb**2) > 10**(-10), sqrt(self.aa**2 + self.bb**2), 10**(-10))
+            aa = self.salfa + tt1*self.dzdy
+            bb = self.calfa + tt1*self.dzdx
+            norm = conditional(sqrt(aa**2 + bb**2) > 10**(-10), sqrt(aa**2 + bb**2), 10**(-10))
             # we use z_n1 and equals so that we can use an implicit method in Exner
-            self.calfamod = (self.calfa + (self.tt1*self.z_n1.dx(0)))/self.norm
-            self.salfamod = (self.salfa + (self.tt1*self.z_n1.dx(1)))/self.norm
+            calfamod = (self.calfa + (tt1*self.z_n1.dx(0)))/norm
+            salfamod = (self.salfa + (tt1*self.z_n1.dx(1)))/norm
 
         # implement meyer-peter-muller bedload transport formula
-        self.thetaprime = self.mu*(1000*0.5*self.qfc*self.unorm)/((2650-1000)*9.81*self.average_size)
+        thetaprime = self.mu*(1000*0.5*self.qfc*self.unorm)/((2650-1000)*9.81*self.average_size)
 
         # if velocity above a certain critical value then transport occurs
-        self.phi.interpolate(conditional(self.thetaprime < self.thetacr, 0, 8*(self.thetaprime-self.thetacr)**1.5))
+        self.phi.interpolate(conditional(thetaprime < self.thetacr, 0, 8*(thetaprime-self.thetacr)**1.5))
 
         # bedload transport flux with magnitude correction
         self.qb_total = self.slopecoef*self.phi*sqrt(self.g*(2650/1000 - 1)*self.average_size**3)
 
         # formulate bedload transport flux with correct angle depending on corrections implemented
         if self.angle_correction:
-            self.qbx = self.qb_total*self.calfamod
-            self.qby = self.qb_total*self.salfamod
+            self.qbx = self.qb_total*calfamod
+            self.qby = self.qb_total*salfamod
         else:
             self.qbx = self.qb_total*self.calfa
             self.qby = self.qb_total*self.salfa
