@@ -21,3 +21,29 @@ Using time integrator: CoupledCrankNicolson2D
 r-adaptation converged in 49 iterations.
     0     0 T=      0.00 eta norm:     1.6805 u norm:     1.9463  0.00
 volume2d rel. error  0.0000e+00
+    1    60 T=     18.00 eta norm:     1.6799 u norm:     1.9466 96.72
+volume2d rel. error -8.3921e-04
+Traceback (most recent call last):
+  File "run_moving_mesh.py", line 81, in <module>
+    swp.solve(uses_adjoint=False)
+  File "/home/mc4117/Documents/adapt_utils/solver.py", line 1138, in solve
+    self.adapt_mesh()
+  File "/home/mc4117/Documents/adapt_utils/solver.py", line 802, in adapt_mesh
+    mesh_mover = MeshMover(self.init_mesh, self.monitor_function, op=self.op)
+  File "/home/mc4117/Documents/adapt_utils/adapt/r.py", line 61, in __init__
+    self.create_functions()
+  File "/home/mc4117/Documents/adapt_utils/adapt/r.py", line 112, in create_functions
+    self.update()
+  File "/home/mc4117/Documents/adapt_utils/adapt/r.py", line 130, in update
+    self.monitor.interpolate(self.monitor_function(self.mesh))
+  File "run_moving_mesh.py", line 70, in gradient_interface_monitor
+    mon_init = project(sqrt(Constant(1.0) + alpha * norm_two_proj), P1)
+  File "/data2/firedrake/src/firedrake/firedrake/adjoint/projection.py", line 19, in wrapper
+    output = project(*args, **kwargs)
+  File "/data2/firedrake/src/firedrake/firedrake/projection.py", line 92, in project
+    use_slate_for_inverse=use_slate_for_inverse).project()
+  File "/data2/firedrake/src/firedrake/firedrake/projection.py", line 170, in project
+    self.apply_massinv(self.target, self.rhs)
+  File "/data2/firedrake/src/firedrake/firedrake/linear_solver.py", line 160, in solve
+    raise ConvergenceError("LinearSolver failed to converge after %d iterations with reason: %s", self.ksp.getIterationNumber(), solving_utils.KSPReasons[r])
+firedrake.exceptions.ConvergenceError: ('LinearSolver failed to converge after %d iterations with reason: %s', 0, 'DIVERGED_NANORINF')

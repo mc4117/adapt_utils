@@ -9,3 +9,12 @@ dt = 0.3
 Coupled time integrator: CoupledCrankNicolson2D
   Shallow Water time integrator: CrankNicolson
   Tracer time integrator: CrankNicolson
+Using time integrator: CoupledCrankNicolson2D
+Minimum angle in mesh: 28.81 degrees
+Maximum SIPG value:        18.18
+Maximum tracer SIPG value: 18.18
+dt = 0.3
+Coupled time integrator: CoupledCrankNicolson2D
+  Shallow Water time integrator: CrankNicolson
+  Tracer time integrator: CrankNicolson
+Using time integrator: CoupledCrankNicolson2D
