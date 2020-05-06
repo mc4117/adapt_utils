@@ -16,6 +16,7 @@ nx = 0.2
 alpha = 0.0
 
 op = TrenchOptions(approach='monge_ampere',
+                   input_dir = 'hydrodynamics_trench_super_coarse',                   
                    plot_timeseries=False,
                    plot_pvd=True,
                    debug=False,
@@ -24,7 +25,10 @@ op = TrenchOptions(approach='monge_ampere',
                    friction='nikuradse',
                    nx=nx,
                    ny=1,
-                   r_adapt_rtol=1.0e-3)
+                   r_adapt_rtol=1.0e-3,
+                   init = True)
+
+#op.set_up_morph_model(input_dir = 'hydrodynamics_trench_super_coarse')
 
 swp = UnsteadyShallowWaterProblem(op, levels=0)
 swp.setup_solver()

@@ -1,5 +1,6 @@
 from thetis import *
 from thetis.configuration import *
+from firedrake.petsc import PETSc
 
 from adapt_utils.swe.morphological_options import MorphOptions
 

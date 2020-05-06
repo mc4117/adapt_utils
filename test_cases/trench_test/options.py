@@ -23,80 +23,52 @@ class TrenchOptions(MorphOptions):
     EarthArXiv, 9 Jan. 2020. Web.
     """
 
-    def __init__(self, friction='manning', plot_timeseries=False, nx=1, ny=1, **kwargs):
+    def __init__(self, friction='manning', plot_timeseries=False, nx=1, ny=1, mesh = None, input_dir = None, **kwargs):
+        
         super(TrenchOptions, self).__init__(**kwargs)
-
-        self.plot_timeseries = plot_timeseries
-        self.default_mesh = RectangleMesh(np.int(16*5*nx), 5*ny, 16, 1.1)
-        self.P1DG = FunctionSpace(self.default_mesh, "DG", 1)
-        self.P1 = FunctionSpace(self.default_mesh, "CG", 1)
-        self.P1_vec = VectorFunctionSpace(self.default_mesh, "CG", 1)
-        self.P1_vec_dg = VectorFunctionSpace(self.default_mesh, "DG", 1)
-
-        self.plot_pvd = True
-        self.implicit_source = False
-        self.hessian_recovery = 'dL2'
-
-        ts = time.time()
-        st = datetime.datetime.fromtimestamp(ts).strftime('%Y-%m-%d %H:%M:%S')
-        outputdir = 'outputs' + st
-
-        self.di = outputdir  # "morph_output"
-
-        # Physical
-        self.base_viscosity = 1e-6
-
-        self.gravity = Constant(9.81)
-
-        self.wetting_and_drying = False
-
+        
         try:
             assert friction in ('nikuradse', 'manning')
         except AssertionError:
             raise ValueError("Friction parametrisation '{:s}' not recognised.".format(friction))
-        self.friction = friction
-        self.average_size = 160e-6  # Average sediment size
+        self.friction = friction        
+
+
+        self.plot_timeseries = plot_timeseries
+        if mesh is None:
+            self.default_mesh = RectangleMesh(np.int(16*5*nx), 5*ny, 16, 1.1)
+            self.P1DG = FunctionSpace(self.default_mesh, "DG", 1)
+            self.P1 = FunctionSpace(self.default_mesh, "CG", 1)
+            self.P1_vec = VectorFunctionSpace(self.default_mesh, "CG", 1)
+            self.P1_vec_dg = VectorFunctionSpace(self.default_mesh, "DG", 1)
+        else:
+            self.P1DG = FunctionSpace(mesh, "DG", 1)
+            self.P1 = FunctionSpace(mesh, "CG", 1)
+            self.P1_vec = VectorFunctionSpace(mesh, "CG", 1)
+            self.P1_vec_dg = VectorFunctionSpace(mesh, "DG", 1)   
+            
+        if input_dir is not None:
+            self.input_dir = input_dir
+
+        self.plot_pvd = True
+        self.hessian_recovery = 'dL2'
 
         self.grad_depth_viscosity = True
-        self.tracer_list = []
 
         self.bathymetry_file = File(self.di + "/bathy.pvd")
 
         self.num_hours = 15
 
-        # Physical
-        self.base_diffusivity = 0.15756753359379702
-
-        self.porosity = Constant(0.4)
-        self.ks = 0.025
-
-        self.solve_tracer = True
-
-        try:
-            assert friction in ('nikuradse', 'manning')
-        except AssertionError:
-            raise ValueError("Friction parametrisation '{:s}' not recognised.".format(friction))
-        self.friction = friction
-        self.morfac = 100
-
-        # Initial
-        input_dir = 'hydrodynamics_trench'
-
-        self.eta_init, self.uv_init = self.initialise_fields(input_dir, self.di)
-        self.uv_d = Function(self.P1_vec_dg).project(self.uv_init)
-        self.eta_d = Function(self.P1DG).project(self.eta_init)
-
-        self.convective_vel_flag = True
-
         self.t_old = Constant(0.0)
-
-        self.slope_eff = True
-        self.angle_correction = True
-        self.set_up_suspended(self.default_mesh)
-        self.set_up_bedload(self.default_mesh)
-
         # Stabilisation
         self.stabilisation = 'lax_friedrichs'
+        
+        self.morfac = 100
+
+        if mesh is None:
+            self.set_up_morph_model(self.input_dir)
+        else:
+            self.set_up_morph_model(self.input_dir, mesh)
 
         # Time integration
 
@@ -107,6 +79,7 @@ class TrenchOptions(MorphOptions):
         self.timestepper = 'CrankNicolson'
         self.implicitness_theta = 1.0
 
+        
         # Adaptivity
         self.h_min = 1e-8
         self.h_max = 10.
@@ -121,13 +94,49 @@ class TrenchOptions(MorphOptions):
         self.xrange = np.linspace(tol, 16-tol, 20)
         self.qois = []
 
-        # Outputs  (NOTE: self.di has changed)
-        self.bath_file = File(os.path.join(self.di, 'bath_export.pvd'))
+        
+    def set_up_morph_model(self, input_dir, mesh = None):
 
+        ts = time.time()
+        st = datetime.datetime.fromtimestamp(ts).strftime('%Y-%m-%d %H:%M:%S')
+        outputdir = 'outputs' + st
+
+        self.di = outputdir  # "morph_output"
+        # Outputs
+        self.bath_file = File(os.path.join(self.di, 'bath_export.pvd'))        
+
+        # Physical
+        self.base_viscosity = 1e-6        
+        self.base_diffusivity = 0.15756753359379702
+        self.gravity = Constant(9.81)
+        self.porosity = Constant(0.4)
+        self.ks = Constant(0.025)
+        self.average_size = 160e-6  # Average sediment size        
+
+        self.wetting_and_drying = False
+        self.implicit_source = False
+        self.solve_tracer = True 
+        self.slope_eff = True
+        self.angle_correction = True
+
+        # Initial
+        self.elev_init, self.uv_init = self.initialise_fields(input_dir, self.di)
+
+        self.uv_d = Function(self.P1_vec_dg).project(self.uv_init)
+
+        self.eta_d = Function(self.P1DG).project(self.elev_init)
+        
+        if mesh is None:
+            self.set_up_suspended(self.default_mesh)
+            self.set_up_bedload(self.default_mesh)
+        else:
+            self.set_up_suspended(mesh)
+            self.set_up_bedload(mesh)        
+        
     def set_source_tracer(self, fs, solver_obj=None, init=False):
         if init:
-            self.depo = Function(fs).project(self.settling_velocity * self.coeff)
-            self.ero = Function(fs).project(self.settling_velocity * self.ceq)
+            self.depo = Function(fs).interpolate(self.settling_velocity * self.coeff)
+            self.ero = Function(fs).interpolate(self.settling_velocity * self.ceq)
         else:
             self.depo.interpolate(self.settling_velocity * self.coeff)
             self.ero.interpolate(self.settling_velocity * self.ceq)
@@ -199,26 +208,26 @@ class TrenchOptions(MorphOptions):
         self.initial_value = Function(fs, name="Initial condition")
         u, eta = self.initial_value.split()
         u.project(self.uv_init)
-        eta.project(self.eta_init)
+        eta.project(self.elev_init)
         return self.initial_value
 
     def get_update_forcings(self, solver_obj):
 
         def update_forcings(t):
-
-            self.tracer_list.append(min(solver_obj.fields.tracer_2d.dat.data[:]))
-
+                       
             self.update_key_hydro(solver_obj)
-
+            
             if self.t_old.dat.data[:] == t:
-                self.update_suspended(solver_obj)
-                self.update_bedload(solver_obj)
+                if self.suspended:
+                    self.update_suspended(solver_obj)
+                if self.bedload:
+                    self.update_bedload(solver_obj)
 
                 solve(self.f == 0, self.z_n1)
 
                 self.bathymetry.assign(self.z_n1)
                 solver_obj.fields.bathymetry_2d.assign(self.z_n1)
-
+            
             self.t_old.assign(t)
 
         return update_forcings
@@ -226,18 +235,21 @@ class TrenchOptions(MorphOptions):
     def initialise_fields(self, inputdir, outputdir):
         """
         Initialise simulation with results from a previous simulation
-        """
+        """     
         from firedrake.petsc import PETSc
-
+        try:
+            import firedrake.cython.dmplex as dmplex
+        except:
+            import firedrake.dmplex as dmplex  # Older version        
         # mesh
         with timed_stage('mesh'):
             # Load
             newplex = PETSc.DMPlex().create()
             newplex.createFromFile(inputdir + '/myplex.h5')
             mesh = Mesh(newplex)
-
-        DG_2d = FunctionSpace(mesh, 'DG', 1)
-        vector_dg = VectorFunctionSpace(mesh, 'DG', 1)
+    
+        DG_2d = FunctionSpace(mesh, 'DG', 1)  
+        vector_dg = VectorFunctionSpace(mesh, 'DG', 1)          
         # elevation
         with timed_stage('initialising elevation'):
             chk = DumbCheckpoint(inputdir + "/elevation", mode=FILE_READ)
@@ -247,12 +259,13 @@ class TrenchOptions(MorphOptions):
             chk.close()
         # velocity
         with timed_stage('initialising velocity'):
-            chk = DumbCheckpoint(inputdir + "/velocity", mode=FILE_READ)
+            chk = DumbCheckpoint(inputdir + "/velocity" , mode=FILE_READ)
             uv_init = Function(vector_dg, name="velocity")
             chk.load(uv_init)
             File(outputdir + "/velocity_imported.pvd").write(uv_init)
             chk.close()
-        return elev_init, uv_init,
+
+        return  elev_init, uv_init, 
 
     def get_export_func(self, solver_obj):
         self.bath_export = solver_obj.fields.bathymetry_2d
