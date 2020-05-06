@@ -18,6 +18,6 @@ Coupled time integrator: CoupledCrankNicolson2D
   Shallow Water time integrator: CrankNicolson
   Tracer time integrator: CrankNicolson
 Using time integrator: CoupledCrankNicolson2D
-r-adaptation converged in 37 iterations.
+r-adaptation converged in 49 iterations.
     0     0 T=      0.00 eta norm:     1.6805 u norm:     1.9463  0.00
 volume2d rel. error  0.0000e+00

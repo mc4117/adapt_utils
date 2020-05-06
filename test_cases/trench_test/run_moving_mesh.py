@@ -12,11 +12,13 @@ from adapt_utils.norms import local_frobenius_norm
 
 t1 = time.time()
 
-nx = 0.2
+nx = 0.5
 alpha = 0.0
 
+dir = 'hydrodynamics_trench_' + str(nx)
+
 op = TrenchOptions(approach='monge_ampere',
-                   input_dir = 'hydrodynamics_trench_super_coarse',                   
+                   input_dir = dir,
                    plot_timeseries=False,
                    plot_pvd=True,
                    debug=False,
@@ -27,8 +29,6 @@ op = TrenchOptions(approach='monge_ampere',
                    ny=1,
                    r_adapt_rtol=1.0e-3,
                    init = True)
-
-#op.set_up_morph_model(input_dir = 'hydrodynamics_trench_super_coarse')
 
 swp = UnsteadyShallowWaterProblem(op, levels=0)
 swp.setup_solver()
@@ -74,7 +74,7 @@ def gradient_interface_monitor(mesh, alpha=alpha, gamma=0.0):
     a -= inner(tau, mon_init)*dx
     solve(a == 0, H)
 
-    return mon_init
+    return H
 
 
 swp.monitor_function = gradient_interface_monitor
