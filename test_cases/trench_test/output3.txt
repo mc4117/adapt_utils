@@ -2,20 +2,34 @@
   return _prepare_from_string(" ".join(pjargs))
 /data2/firedrake/lib/python3.5/site-packages/pyproj/crs/crs.py:294: FutureWarning: '+init=<authority>:<code>' syntax is deprecated. '<authority>:<code>' is the preferred initialization method. When making the change, be mindful of axis order changes: https://pyproj4.github.io/pyproj/stable/gotchas.html#axis-order-changes-in-proj-6
   projstring = _prepare_from_string(" ".join((projstring, projkwargs)))
-Minimum angle in mesh: 41.35 degrees
-Maximum SIPG value:        11.36
-Maximum tracer SIPG value: 11.36
+Minimum angle in mesh: 42.27 degrees
+Maximum SIPG value:        11.00
+Maximum tracer SIPG value: 11.00
 dt = 0.3
 Coupled time integrator: CoupledCrankNicolson2D
   Shallow Water time integrator: CrankNicolson
   Tracer time integrator: CrankNicolson
 Using time integrator: CoupledCrankNicolson2D
-Minimum angle in mesh: 41.35 degrees
-Maximum SIPG value:        11.36
-Maximum tracer SIPG value: 11.36
+Minimum angle in mesh: 42.27 degrees
+Maximum SIPG value:        11.00
+Maximum tracer SIPG value: 11.00
 dt = 0.3
 Coupled time integrator: CoupledCrankNicolson2D
   Shallow Water time integrator: CrankNicolson
   Tracer time integrator: CrankNicolson
 Using time integrator: CoupledCrankNicolson2D
-r-adaptation converged in 43 iterations.
+r-adaptation converged in 42 iterations.
+    0     0 T=      0.00 eta norm:     1.6804 u norm:     1.9474  0.00
+volume2d rel. error  0.0000e+00
+    1    60 T=     18.00 eta norm:     1.6799 u norm:     1.9457 116.53
+volume2d rel. error -4.8614e-04
+r-adaptation converged in 40 iterations.
+    1    60 T=     18.00 eta norm:     1.6800 u norm:     1.9454  0.00
+volume2d rel. error  0.0000e+00
+    2   120 T=     36.00 eta norm:     1.6800 u norm:     1.9431 115.75
+volume2d rel. error -2.6338e-05
+r-adaptation converged in 40 iterations.
+    2   120 T=     36.00 eta norm:     1.6800 u norm:     1.9439  0.00
+volume2d rel. error  0.0000e+00
+    3   180 T=     54.00 eta norm:     1.6798 u norm:     1.9406 115.38
+volume2d rel. error -2.0173e-04
