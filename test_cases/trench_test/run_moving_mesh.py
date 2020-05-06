@@ -13,7 +13,7 @@ from adapt_utils.norms import local_frobenius_norm
 t1 = time.time()
 
 nx = 0.2
-alpha = 100.0
+alpha = 0.0
 
 op = TrenchOptions(approach='monge_ampere',
                    input_dir = 'hydrodynamics_trench_super_coarse',                   
@@ -99,7 +99,7 @@ for i in range(len(data[0].dropna())):
 
 df = pd.concat([pd.DataFrame(datathetis, columns=['x']), pd.DataFrame(bathymetrythetis1, columns=['bath'])], axis=1)
 
-df.to_csv('adapt_output2/bed_trench_output' + str(nx) + '_' + str(alpha) + '.csv')
+df.to_csv('adapt_output2/bed_trench_output_no_diff' + str(nx) + '_' + str(alpha) + '.csv')
 
 plt.plot(datathetis, bathymetrythetis1, '.', linewidth=2, label='adapted mesh')
 plt.legend()
@@ -111,7 +111,7 @@ print(np.sqrt(sum(diff_thetis)))
 print("total time: ")
 print(t2-t1)
 
-f = open("adapt_output2/output_frob_norm" + str(nx) + '_' + str(alpha) + '.txt', "w+")
+f = open("adapt_output2/output_frob_norm_no_diff" + str(nx) + '_' + str(alpha) + '.txt', "w+")
 f.write(str(np.sqrt(sum(diff_thetis))))
 f.write("\n")
 f.write(str(t2-t1))
