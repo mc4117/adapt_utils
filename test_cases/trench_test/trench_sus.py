@@ -15,7 +15,7 @@ import time
 
 timestep = 0.3
 
-fac = 0.5
+fac = 2.0
 
 def boundary_conditions_fn_trench(bathymetry_2d, flag, morfac=1, t_new=0, state='initial'):
     """

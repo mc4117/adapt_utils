@@ -45,7 +45,7 @@ error_list2.append(sum([(df_test7_2['bath'][i] - df_real['bath'][i])**2 for i in
 
 df_test1_3 = pd.read_csv('adapt_output2/bed_trench_output_0.5_0.0.csv')
 df_test2_3 = pd.read_csv('adapt_output2/bed_trench_output_0.5_10.0.csv')
-#df_test3_3 = pd.read_csv('adapt_output2/bed_trench_output_0.5_25.0.csv')
+df_test3_3 = pd.read_csv('adapt_output2/bed_trench_output_0.5_25.0.csv')
 df_test4_3 = pd.read_csv('adapt_output2/bed_trench_output_0.5_50.0.csv')
 df_test5_3 = pd.read_csv('adapt_output2/bed_trench_output_0.5_100.0.csv')
 df_test6_3 = pd.read_csv('adapt_output2/bed_trench_output_0.5_200.0.csv')
@@ -54,8 +54,44 @@ df_test6_3 = pd.read_csv('adapt_output2/bed_trench_output_0.5_200.0.csv')
 error_list3 = []
 error_list3.append(sum([(df_test1_3['bath'][i] - df_real['bath'][i])**2 for i in range(len(df_real))]))
 error_list3.append(sum([(df_test2_3['bath'][i] - df_real['bath'][i])**2 for i in range(len(df_real))]))
-#error_list3.append(sum([(df_test3_3['bath'][i] - df_real['bath'][i])**2 for i in range(len(df_real))]))
+error_list3.append(sum([(df_test3_3['bath'][i] - df_real['bath'][i])**2 for i in range(len(df_real))]))
 error_list3.append(sum([(df_test4_3['bath'][i] - df_real['bath'][i])**2 for i in range(len(df_real))]))
 error_list3.append(sum([(df_test5_3['bath'][i] - df_real['bath'][i])**2 for i in range(len(df_real))]))
 error_list3.append(sum([(df_test6_3['bath'][i] - df_real['bath'][i])**2 for i in range(len(df_real))]))
 #error_list3.append(sum([(df_test7_3['bath'][i] - df_real['bath'][i])**2 for i in range(len(df_real))]))
+
+df_test1_4 = pd.read_csv('adapt_output2/bed_trench_output_0.6_0.0.csv')
+df_test2_4 = pd.read_csv('adapt_output2/bed_trench_output_0.6_10.0.csv')
+df_test3_4 = pd.read_csv('adapt_output2/bed_trench_output_0.6_25.0.csv')
+df_test4_4 = pd.read_csv('adapt_output2/bed_trench_output_0.6_50.0.csv')
+df_test5_4 = pd.read_csv('adapt_output2/bed_trench_output_0.6_100.0.csv')
+df_test6_4 = pd.read_csv('adapt_output2/bed_trench_output_0.6_200.0.csv')
+#df_test7_4 = pd.read_csv('adapt_output2/bed_trench_output_0.6_500.0.csv')
+
+error_list4 = []
+error_list4.append(sum([(df_test1_4['bath'][i] - df_real['bath'][i])**2 for i in range(len(df_real))]))
+error_list4.append(sum([(df_test2_4['bath'][i] - df_real['bath'][i])**2 for i in range(len(df_real))]))
+error_list4.append(sum([(df_test3_4['bath'][i] - df_real['bath'][i])**2 for i in range(len(df_real))]))
+error_list4.append(sum([(df_test4_4['bath'][i] - df_real['bath'][i])**2 for i in range(len(df_real))]))
+error_list4.append(sum([(df_test5_4['bath'][i] - df_real['bath'][i])**2 for i in range(len(df_real))]))
+error_list4.append(sum([(df_test6_4['bath'][i] - df_real['bath'][i])**2 for i in range(len(df_real))]))
+#error_list4.append(sum([(df_test7_4['bath'][i] - df_real['bath'][i])**2 for i in range(len(df_real))]))
+
+
+df_test1_5 = pd.read_csv('adapt_output2/bed_trench_output_0.8_0.0.csv')
+df_test2_5 = pd.read_csv('adapt_output2/bed_trench_output_0.8_10.0.csv')
+df_test3_5 = pd.read_csv('adapt_output2/bed_trench_output_0.8_25.0.csv')
+df_test4_5 = pd.read_csv('adapt_output2/bed_trench_output_0.8_50.0.csv')
+df_test5_5 = pd.read_csv('adapt_output2/bed_trench_output_0.8_100.0.csv')
+df_test6_5 = pd.read_csv('adapt_output2/bed_trench_output_0.8_200.0.csv')
+#df_test7_5 = pd.read_csv('adapt_output2/bed_trench_output_0.8_500.0.csv')
+
+error_list5 = []
+error_list5.append(sum([(df_test1_5['bath'][i] - df_real['bath'][i])**2 for i in range(len(df_real))]))
+error_list5.append(sum([(df_test2_5['bath'][i] - df_real['bath'][i])**2 for i in range(len(df_real))]))
+error_list5.append(sum([(df_test3_5['bath'][i] - df_real['bath'][i])**2 for i in range(len(df_real))]))
+error_list5.append(sum([(df_test4_5['bath'][i] - df_real['bath'][i])**2 for i in range(len(df_real))]))
+error_list5.append(sum([(df_test5_5['bath'][i] - df_real['bath'][i])**2 for i in range(len(df_real))]))
+error_list5.append(sum([(df_test6_5['bath'][i] - df_real['bath'][i])**2 for i in range(len(df_real))]))
+#error_list5.append(sum([(df_test7_5['bath'][i] - df_real['bath'][i])**2 for i in range(len(df_real))]))df_test1_4 = pd.read_csv('adapt_output2/bed_trench_output_0.6_0.0.csv')
+
