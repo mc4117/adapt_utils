@@ -21,15 +21,19 @@ class MorphOptions(ShallowWaterOptions):
         self.depth_integrated = False
         self.suspended = True
         self.bedload = True
+        self.implicit_source = False
         super(MorphOptions, self).__init__(**kwargs)
 
     def set_tracer_init(self, fs):
-        if self.conservative:
-            tracer_init = project(self.depth*self.ceq/self.coeff, fs)
+        if self.fixed_tracer is not None:
+            return self.fixed_tracer
         else:
-            divisor = interpolate(self.ceq/self.coeff, self.ceq.function_space())
-            tracer_init = project(divisor, fs)
-        return tracer_init
+            if self.conservative:
+                tracer_init = project(self.depth*self.ceq/self.coeff, fs)
+            else:
+                divisor = interpolate(self.ceq/self.coeff, self.ceq.function_space())
+                tracer_init = project(divisor, fs)
+            return tracer_init
 
     def set_up_suspended(self, mesh, tracer=None):
         P1 = FunctionSpace(mesh, "CG", 1)
@@ -72,7 +76,11 @@ class MorphOptions(ShallowWaterOptions):
         if self.t_old.dat.data[:] == 0.0:
             self.set_bathymetry(P1)
 
-        self.depth = interpolate(self.elev_cg + self.bathymetry, P1)
+        if self.wetting_and_drying:
+            H = interpolate(self.elev_cg + self.bathymetry, P1)
+            self.depth = interpolate(H + (0.5 * (sqrt(H ** 2 + self.wetting_and_drying_alpha ** 2) - H)), P1)
+        else:
+            self.depth = interpolate(self.elev_cg + self.bathymetry, P1)
 
         self.hc = conditional(self.depth > 0.001, self.depth, 0.001)
         self.aux = conditional(11.036*self.hc/self.ks > 1.001, 11.036*self.hc/self.ks, 1.001)
@@ -92,8 +100,11 @@ class MorphOptions(ShallowWaterOptions):
         self.ustar = sqrt(0.5*self.qfc*self.unorm)
         self.exp1 = conditional((conditional((self.settling_velocity/(0.4*self.ustar)) - 1 > 0, (self.settling_velocity/(0.4*self.ustar)) - 1, -(self.settling_velocity/(0.4*self.ustar)) + 1)) > 10**(-4), conditional((self.settling_velocity/(0.4*self.ustar)) - 1 > 3, 3, (self.settling_velocity/(0.4*self.ustar))-1), 0)
         self.coefftest = conditional((conditional((self.settling_velocity/(0.4*self.ustar)) - 1 > 0, (self.settling_velocity/(0.4*self.ustar)) - 1, -(self.settling_velocity/(0.4*self.ustar)) + 1)) > 10**(-4), self.B*(1-self.B**self.exp1)/self.exp1, -self.B*ln(self.B))
-        self.coeff = interpolate(conditional(self.coefftest > 0, 1/self.coefftest, 0), P1DG)
-
+        if self.wetting_and_drying:
+            self.coeff = interpolate(conditional(conditional(self.coefftest>10**(-12), 1/self.coefftest, 10**12)>1, conditional(self.coefftest>10**(-12), 1/self.coefftest, 10**12), 1), P1DG)
+        else:
+            self.coeff = interpolate(conditional(self.coefftest > 0, 1/self.coefftest, 0), P1DG)
+            
         # erosion flux - for vanrijn
         s0 = (conditional(1000*0.5*self.qfc*self.unorm*self.mu > 0, 1000*0.5*self.qfc*self.unorm*self.mu, 0) - self.taucr)/self.taucr
         self.ceq = interpolate(0.015*(self.average_size/self.a) * ((conditional(s0 < 0, 0, s0))**(1.5))/(self.dstar**0.3), P1DG)
@@ -103,7 +114,10 @@ class MorphOptions(ShallowWaterOptions):
         else:
             self.tracer_init_value = Constant(self.ceq.at([0, 0])/self.coeff.at([0, 0]))
 
-        self.tracer_init = self.set_tracer_init(self.P1DG)
+        if tracer is None:
+            self.tracer_init = self.set_tracer_init(self.P1DG)
+        else:
+            self.tracer_init = project(tracer, self.P1DG)
 
         self.depo, self.ero = self.set_source_tracer(P1DG, solver_obj=None, init=True)
 

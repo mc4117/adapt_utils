@@ -109,6 +109,8 @@ class SteadyShallowWaterProblem(SteadyProblem):
         options.use_automatic_sipg_parameter = op.sipg_parameter is None
         options.use_wetting_and_drying = op.wetting_and_drying
         options.wetting_and_drying_alpha = op.wetting_and_drying_alpha
+        if hasattr(op, 'norm_smoother_constant'):
+            options.norm_smoother = op.norm_smoother_constant
         options.solve_tracer = op.solve_tracer
         if op.solve_tracer:
             raise NotImplementedError  # TODO
@@ -629,7 +631,9 @@ class UnsteadyShallowWaterProblem(UnsteadyProblem):
         options.use_automatic_sipg_parameter = op.sipg_parameter is None
         options.use_wetting_and_drying = op.wetting_and_drying
         options.wetting_and_drying_alpha = op.wetting_and_drying_alpha
-        options.solve_tracer = op.solve_tracer
+        if hasattr(op, 'norm_smoother_constant'):
+            options.norm_smoother = op.norm_smoother_constant      
+        options.solve_tracer = op.solve_tracer            
         if op.solve_tracer:
             options.use_tracer_conservative_form = op.conservative
             options.tracer_advective_velocity_factor = self.op.corrective_velocity_factor
@@ -644,6 +648,13 @@ class UnsteadyShallowWaterProblem(UnsteadyProblem):
         self.solver_obj.bnd_functions['shallow_water'] = op.set_boundary_conditions(self.V)
         if op.solve_tracer:
             self.solver_obj.bnd_functions['tracer'] = op.set_boundary_conditions_tracer(self.V)
+
+            for i in self.solver_obj.bnd_functions['tracer'].keys():
+                if i in self.solver_obj.bnd_functions['shallow_water'].keys():
+                    self.solver_obj.bnd_functions['tracer'][i].update(self.solver_obj.bnd_functions['shallow_water'][i])
+            for i in self.solver_obj.bnd_functions['shallow_water'].keys():
+                if i not in self.solver_obj.bnd_functions['tracer'].keys():
+                    self.solver_obj.bnd_functions['tracer'].update({i:self.solver_obj.bnd_functions['shallow_water'][i]})        
 
         if op.solve_tracer:
             if self.op.tracer_init is not None:

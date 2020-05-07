@@ -88,6 +88,11 @@ class ShallowWaterOptions(Options):
         """Set the initial displacement of the boundary elevation."""
         self.elev_in = Constant(0.0)
         self.elev_out = Constant(0.0)
+        
+    def set_boundary_flux(self):
+        """Set the initial flux of the boundary."""
+        self.flux_in = Constant(0.0)
+        self.flux_out = Constant(0.0)        
 
     def get_eta_tilde(self, solver_obj):
         bathymetry_displacement = solver_obj.eq_sw.depth.wd_bathymetry_displacement
