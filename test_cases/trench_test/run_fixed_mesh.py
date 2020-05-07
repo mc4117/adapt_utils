@@ -10,11 +10,12 @@ from adapt_utils.swe.solver import UnsteadyShallowWaterProblem
 
 t1 = time.time()
 
-nx = 0.2
+nx = 2.0
 
+dir = 'hydrodynamics_trench_' + str(nx)
 
 op = TrenchOptions(approach='fixed_mesh',
-                   input_dir = 'hydrodynamics_trench_super_coarse',
+                   input_dir = dir,
                    plot_timeseries=False,
                    plot_pvd=True,
                    debug=False,
