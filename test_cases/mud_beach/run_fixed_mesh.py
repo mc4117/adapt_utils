@@ -10,7 +10,7 @@ from adapt_utils.swe.solver import UnsteadyShallowWaterProblem
 
 t1 = time.time()
 
-nx = 0.25
+nx = 2.0
 
 op = MudBeachOptions(approach='fixed_mesh',
                    plot_timeseries=False,
@@ -34,11 +34,13 @@ swp.solve(uses_adjoint=False)
 
 t2 = time.time()
 
+print(t2 - t1)
+
 xaxisthetis1 = []
 baththetis1 = []
 
 for i in np.linspace(0, 9900, 9901):
     xaxisthetis1.append(i)
-    baththetis1.append(-solver_obj.fields.bathymetry_2d.at([i, 400]))
+    baththetis1.append(-swp.solver_obj.fields.bathymetry_2d.at([i, 400]))
 df = pd.concat([pd.DataFrame(xaxisthetis1, columns = ['x']), pd.DataFrame(baththetis1, columns = ['bath'])], axis = 1)
-df.to_csv("final_result_nx1.csv", index = False)
+df.to_csv("final_result_nx" + str(nx) + ".csv", index = False)
