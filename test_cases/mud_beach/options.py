@@ -83,7 +83,7 @@ class MudBeachOptions(MorphOptions):
 
         # Time integration
 
-        self.dt = 150
+        self.dt = 75
         self.end_time = self.num_hours*3600.0/self.morfac
         self.dt_per_export = 200
         self.dt_per_remesh = 200

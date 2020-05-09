@@ -1,0 +1,69 @@
+dt = 150
+Coupled time integrator: CoupledCrankNicolson2D
+  Shallow Water time integrator: CrankNicolson
+  Tracer time integrator: CrankNicolson
+Using time integrator: CoupledCrankNicolson2D
+    0     0 T=      0.00 eta norm:     0.0000 u norm:     0.0003  0.00
+volume2d rel. error -0.0000e+00
+    1   200 T=  30000.00 eta norm:  6287.0665 u norm:   353.4702 451.29
+volume2d rel. error -4.1745e+00
+    2   400 T=  60000.00 eta norm:  3854.6674 u norm:   539.8848 447.26
+volume2d rel. error  1.7112e+00
+    3   600 T=  90000.00 eta norm:  3532.2247 u norm:   730.5975 451.72
+volume2d rel. error  9.0044e-02
+    4   800 T= 120000.00 eta norm:  6882.7317 u norm:   157.7469 449.06
+volume2d rel. error -4.7840e+00
+    5  1000 T= 150000.00 eta norm:  1470.7393 u norm:   685.4604 445.79
+volume2d rel. error  6.0356e-01
+    6  1200 T= 180000.00 eta norm:  4441.7692 u norm:   501.4371 436.65
+volume2d rel. error  1.1686e+00
+    7  1400 T= 210000.00 eta norm:  5733.0962 u norm:   531.8737 435.01
+volume2d rel. error -3.9345e+00
+    8  1600 T= 240000.00 eta norm:  2027.9182 u norm:   728.0229 432.31
+volume2d rel. error -1.0617e+00
+    9  1800 T= 270000.00 eta norm:  4702.8996 u norm:   255.5300 435.17
+volume2d rel. error  1.7596e+00
+   10  2000 T= 300000.00 eta norm:  3827.2191 u norm:   741.8537 436.40
+volume2d rel. error -2.3587e+00
+   11  2200 T= 330000.00 eta norm:  4634.7703 u norm:   541.5728 434.98
+volume2d rel. error -2.8371e+00
+   12  2400 T= 360000.00 eta norm:  4028.9353 u norm:   325.5238 433.54
+volume2d rel. error  1.8319e+00
+   13  2600 T= 390000.00 eta norm:  2830.6887 u norm:   740.7393 436.79
+volume2d rel. error -7.4611e-01
+   14  2800 T= 420000.00 eta norm:  6179.0289 u norm:   195.6344 436.10
+volume2d rel. error -4.0370e+00
+   15  3000 T= 450000.00 eta norm:  2492.7368 u norm:   548.1676 438.84
+volume2d rel. error  1.3289e+00
+   16  3200 T= 480000.00 eta norm:  3245.1701 u norm:   567.7890 454.71
+volume2d rel. error  4.7927e-01
+   17  3400 T= 510000.00 eta norm:  6121.7941 u norm:   274.9761 456.00
+volume2d rel. error -4.0471e+00
+   18  3600 T= 540000.00 eta norm:   760.2873 u norm:   675.6841 455.19
+volume2d rel. error  2.0567e-01
+   19  3800 T= 570000.00 eta norm:  3626.5457 u norm:   301.4102 453.06
+volume2d rel. error  1.2254e+00
+   20  4000 T= 600000.00 eta norm:  4716.4420 u norm:   588.1647 451.49
+volume2d rel. error -2.9887e+00
+   21  4200 T= 630000.00 eta norm:  2727.5962 u norm:   632.6456 448.12
+volume2d rel. error -1.3365e+00
+   22  4400 T= 660000.00 eta norm:  3436.5418 u norm:   166.9745 450.01
+volume2d rel. error  1.5507e+00
+   23  4600 T= 690000.00 eta norm:  3089.2863 u norm:   701.1448 450.29
+volume2d rel. error -1.5146e+00
+   24  4800 T= 720000.00 eta norm:  4834.7088 u norm:   403.8249 450.92
+volume2d rel. error -2.8168e+00
+   25  5000 T= 750000.00 eta norm:  2657.3223 u norm:   315.4602 447.51
+volume2d rel. error  1.4759e+00
+   26  5200 T= 780000.00 eta norm:  2524.2973 u norm:   595.9072 453.32
+volume2d rel. error -2.0985e-01
+   27  5400 T= 810000.00 eta norm:  5756.2181 u norm:    93.1818 452.19
+volume2d rel. error -3.5697e+00
+   28  5600 T= 840000.00 eta norm:  1284.7377 u norm:   505.7069 447.77
+volume2d rel. error  9.2590e-01
+00.00 eta norm:  2524.2973 u norm:   595.9072 453.32
+volume2d rel. error -2.0985e-01
+   27  5400 T= 810000.00 eta norm:  5756.2181 u norm:    93.1818 452.19
+volume2d rel. error -3.5697e+00
+   28  5600 T= 840000.00 eta norm:  1284.7377 u norm:   505.7069 447.77
+volume2d rel. error  9.2590e-01
