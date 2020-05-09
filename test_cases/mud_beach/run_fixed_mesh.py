@@ -10,7 +10,7 @@ from adapt_utils.swe.solver import UnsteadyShallowWaterProblem
 
 t1 = time.time()
 
-nx = 0.5
+nx = 0.25
 
 op = MudBeachOptions(approach='fixed_mesh',
                    plot_timeseries=False,

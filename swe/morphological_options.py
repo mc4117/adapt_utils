@@ -22,6 +22,7 @@ class MorphOptions(ShallowWaterOptions):
         self.suspended = True
         self.bedload = True
         self.implicit_source = False
+        self.fixed_tracer = None
         super(MorphOptions, self).__init__(**kwargs)
 
     def set_tracer_init(self, fs):
