@@ -96,7 +96,7 @@ class L2ProjectorGradient(L2Projector):
 
         a = inner(φ, g)*dx
         # L = inner(φ, grad(self.field))*dx
-        L = self.field*dot(φ, n)*ds - div(φ)*self.field*dx  # Enables field to be P0
+        L = self.field*dot(φ, self.n)*ds - div(φ)*self.field*dx  # Enables field to be P0
         self.l2_projection = Function(P1_vec, name="Recovered gradient")
         prob = LinearVariationalProblem(a, L, self.l2_projection, bcs=self.bcs)
         self.projector = LinearVariationalSolver(prob, **self.kwargs)
