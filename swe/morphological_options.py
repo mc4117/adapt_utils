@@ -22,6 +22,7 @@ class MorphOptions(ShallowWaterOptions):
         self.suspended = True
         self.bedload = True
         self.implicit_source = False
+        self.fixed_tracer = None
         super(MorphOptions, self).__init__(**kwargs)
 
     def set_tracer_init(self, fs):
@@ -41,8 +42,10 @@ class MorphOptions(ShallowWaterOptions):
         P1_vec = VectorFunctionSpace(mesh, "CG", 1)
         P1DG_vec = VectorFunctionSpace(mesh, "DG", 1)
 
+        self.viscosity_ref = Constant(10**(-6))
+
         R = Constant(2650/1000 - 1)
-        self.dstar = Constant(self.average_size*((self.g*R)/(self.base_viscosity**2))**(1/3))
+        self.dstar = Constant(self.average_size*((self.g*R)/(self.viscosity_ref**2))**(1/3))
         if max(self.dstar.dat.data[:] < 1):
             print('ERROR: dstar value less than 1')
         elif max(self.dstar.dat.data[:] < 4):
@@ -60,9 +63,9 @@ class MorphOptions(ShallowWaterOptions):
 
         if not hasattr(self, "settling_velocity"):
             if self.average_size <= 100*(10**(-6)):
-                self.settling_velocity = Constant(9.81*(self.average_size**2)*((2650/1000)-1)/(18*self.base_viscosity))
+                self.settling_velocity = Constant(9.81*(self.average_size**2)*((2650/1000)-1)/(18*self.viscosity_ref))
             elif self.average_size <= 1000*(10**(-6)):
-                self.settling_velocity = Constant((10*self.base_viscosity/self.average_size)*(sqrt(1 + 0.01*((((2650/1000) - 1)*9.81*(self.average_size**3))/(self.base_viscosity**2)))-1))
+                self.settling_velocity = Constant((10*self.viscosity_ref/self.average_size)*(sqrt(1 + 0.01*((((2650/1000) - 1)*9.81*(self.average_size**3))/(self.viscosity_ref**2)))-1))
             else:
                 self.settling_velocity = Constant(1.1*sqrt(9.81*self.average_size*((2650/1000) - 1)))
 

@@ -643,9 +643,9 @@ class UnsteadyShallowWaterProblem(UnsteadyProblem):
             else:
                 options.tracer_source_2d = self.op.source
                 options.tracer_sink_2d = self.op.sink
-
         # Boundary conditions
         self.solver_obj.bnd_functions['shallow_water'] = op.set_boundary_conditions(self.V)
+
         if op.solve_tracer:
             self.solver_obj.bnd_functions['tracer'] = op.set_boundary_conditions_tracer(self.V)
 
@@ -668,7 +668,7 @@ class UnsteadyShallowWaterProblem(UnsteadyProblem):
         # Ensure correct iteration count
         self.solver_obj.i_export = self.remesh_step
         self.solver_obj.next_export_t = self.remesh_step*op.dt*op.dt_per_remesh
-        self.solver_obj.iteration = self.remesh_step*op.dt_per_remesh
+        self.solver_obj.iteration = int(self.remesh_step*op.dt_per_remesh)
         self.solver_obj.simulation_time = self.remesh_step*op.dt*op.dt_per_remesh
         for e in self.solver_obj.exporters.values():
             e.set_next_export_ix(self.solver_obj.i_export)

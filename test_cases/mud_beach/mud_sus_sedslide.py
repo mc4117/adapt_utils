@@ -114,7 +114,7 @@ uv, elev = solver_obj.fields.solution_2d.split()
 morph.export_final_state("mud_init", uv, elev)
 
 
-solver_obj, update_forcings_tracer, diff_bathy, diff_bathy_file, outputdir = morph.morphological(boundary_conditions_fn = boundary_conditions_fn_balzano, morfac = 365, morfac_transport = True, suspendedload = True, convectivevel = True,\
+solver_obj, update_forcings_tracer, diff_bathy, diff_bathy_file, outputdir = morph.morphological(boundary_conditions_fn = boundary_conditions_fn_balzano, morfac = 36.5, morfac_transport = True, suspendedload = True, convectivevel = True,\
                     bedload = True, angle_correction = True, slope_eff = True, seccurrent = False, sediment_slide = False, fluc_bcs = True, diffusivity =0.15, wetting_and_drying = True, wetting_alpha = wd_fn, viscosity_hydro = 10**(-6),\
                     mesh2d = mesh2d, bathymetry_2d = bathymetry_2d, input_dir = 'mud_init', ks = 0.025, average_size = 150*(10**(-6)), dt = 150, final_time = 3650*24*3600, update_bedlevel = True, cons_tracer = True, tracer_init = th.Constant(0.0),  depth_integrated = True)
 

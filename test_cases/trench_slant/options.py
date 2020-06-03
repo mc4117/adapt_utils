@@ -12,45 +12,43 @@ from matplotlib import rc
 rc('text', usetex=True)
 
 
-__all__ = ["MudBeachOptions"]
+__all__ = ["TrenchOptions"]
 
 
-class MudBeachOptions(MorphOptions):
+class TrenchSlantOptions(MorphOptions):
     """
-    Parameters for test case adapted from [1].
+    Adapted from test case described in [1].
 
-    [1] Roberts, W. et al. "Investigation using simple mathematical models of 
-    the effect of tidal currents and waves on the profile shape of intertidal 
-    mudflats." Continental Shelf Research 20.10-11 (2000): 1079-1097.
+    [1] Clare, Mariana, et al. “Hydro-morphodynamics 2D Modelling Using a Discontinuous Galerkin Discretisation.”
+    EarthArXiv, 9 Jan. 2020. Web.
     """
 
-    def __init__(self, friction='manning', plot_timeseries=False, nx=1, ny=1, mesh = None, **kwargs):
+    def __init__(self, friction='manning', plot_timeseries=False, nx=1, ny=1, mesh = None, input_dir = None, **kwargs):
         
-        self.settling_velocity = Constant(0.0005)
-        super(MudBeachOptions, self).__init__(**kwargs)
+        super(TrenchSlantOptions, self).__init__(**kwargs)
         
         try:
             assert friction in ('nikuradse', 'manning')
         except AssertionError:
             raise ValueError("Friction parametrisation '{:s}' not recognised.".format(friction))
-        self.friction = friction     
-        
-        self.lx = 10000
-        self.ly = 800
+        self.friction = friction        
+
 
         self.plot_timeseries = plot_timeseries
         if mesh is None:
-            self.default_mesh = RectangleMesh(np.int(50*nx), 4*ny, self.lx, self.ly)
+            self.default_mesh = RectangleMesh(np.int(16*5*nx), 5*ny, 16, 1.1)
             self.P1DG = FunctionSpace(self.default_mesh, "DG", 1)
             self.P1 = FunctionSpace(self.default_mesh, "CG", 1)
             self.P1_vec = VectorFunctionSpace(self.default_mesh, "CG", 1)
             self.P1_vec_dg = VectorFunctionSpace(self.default_mesh, "DG", 1)
         else:
-            print('passed here')
             self.P1DG = FunctionSpace(mesh, "DG", 1)
             self.P1 = FunctionSpace(mesh, "CG", 1)
             self.P1_vec = VectorFunctionSpace(mesh, "CG", 1)
-            self.P1_vec_dg = VectorFunctionSpace(mesh, "DG", 1)
+            self.P1_vec_dg = VectorFunctionSpace(mesh, "DG", 1)   
+            
+        if input_dir is not None:
+            self.input_dir = input_dir
 
         self.plot_pvd = True
         self.hessian_recovery = 'dL2'
@@ -59,37 +57,28 @@ class MudBeachOptions(MorphOptions):
 
         self.bathymetry_file = File(self.di + "/bathy.pvd")
 
-        self.num_hours = 3650*24*2
+        self.num_hours = 15
 
         self.t_old = Constant(0.0)
         # Stabilisation
         self.stabilisation = 'lax_friedrichs'
         
-        self.morfac = 365
+        self.morfac = 100
 
         if mesh is None:
-            self.set_up_morph_model()
+            self.set_up_morph_model(self.input_dir)
         else:
-            self.set_up_morph_model(mesh)
-
-        # Boundary conditions
-        h_amp = -2  # Ocean boundary forcing amplitude
-        v_amp = -0.4 # Ocean boundary foring velocity
-        h_T = 12*3600.  # Ocean boundary forcing period
-        self.ocean_elev_func = lambda t: h_amp * sin(2 * pi * t / h_T)
-        self.ocean_vel_func = lambda t: v_amp * cos(2 * pi * t / h_T)
-        self.flux_func = lambda t, d: -self.ocean_vel_func(t)*d.at([0.0, self.ly/2])*self.ly
-        
-        self.tracer_func = lambda t: -((10**-4)/2.65)*cos(2*pi*t/(12*3600)) if 10800 <= t%(12*3600) < 32400 else 0.0
+            self.set_up_morph_model(self.input_dir, mesh)
 
         # Time integration
 
-        self.dt = 150
+        self.dt = 0.3
         self.end_time = self.num_hours*3600.0/self.morfac
-        self.dt_per_export = 200
-        self.dt_per_remesh = 200
+        self.dt_per_export = 60
+        self.dt_per_remesh = 60
         self.timestepper = 'CrankNicolson'
-        self.implicitness_theta = 1.0       
+        self.implicitness_theta = 1.0
+
         
         # Adaptivity
         self.h_min = 1e-8
@@ -106,7 +95,7 @@ class MudBeachOptions(MorphOptions):
         self.qois = []
 
         
-    def set_up_morph_model(self, mesh = None):
+    def set_up_morph_model(self, input_dir, mesh = None):
 
         ts = time.time()
         st = datetime.datetime.fromtimestamp(ts).strftime('%Y-%m-%d %H:%M:%S')
@@ -114,46 +103,35 @@ class MudBeachOptions(MorphOptions):
 
         self.di = outputdir  # "morph_output"
         # Outputs
-        self.bath_file = File(os.path.join(self.di, 'bath_export.pvd'))
-        self.eta_tilde_file = File(os.path.join(self.di, 'eta_tilde.pvd'))
-        self.eta_tilde = Function(self.P1DG, name='Modified elevation')        
+        self.bath_file = File(os.path.join(self.di, 'bath_export.pvd'))        
 
         # Physical
         self.base_viscosity = 1e-6        
-        self.base_diffusivity = 0.15
+        self.base_diffusivity = 0.15756753359379702
         self.gravity = Constant(9.81)
         self.porosity = Constant(0.4)
         self.ks = Constant(0.025)
-        self.average_size = 150*(10**(-6))  # Average sediment size
-        self.ksp = Constant(3*self.average_size)
+        self.average_size = 160e-6  # Average sediment size        
 
-        self.wetting_and_drying = True
-        self.depth_integrated = True
-        self.conservative = True
-        self.implicit_source = True
+        self.wetting_and_drying = False
+        self.implicit_source = False
         self.solve_tracer = True 
         self.slope_eff = True
         self.angle_correction = True
-        
-        self.wetting_and_drying_alpha = Constant(0.2)
-        self.norm_smoother_constant = Constant(0.2)
 
         # Initial
-        self.elev_init = Function(self.P1DG).interpolate(Constant(0.0))
-        self.uv_init = as_vector((10**(-7), 0.0))
-        
-        self.uv_d = Function(self.P1_vec_dg).interpolate(self.uv_init)
+        self.elev_init, self.uv_init = self.initialise_fields(input_dir, self.di)
 
-        self.eta_d = Function(self.P1DG).interpolate(self.elev_init)
-        
-        self.fixed_tracer = Constant(0.0)
+        self.uv_d = Function(self.P1_vec_dg).project(self.uv_init)
+
+        self.eta_d = Function(self.P1DG).project(self.elev_init)
         
         if mesh is None:
-            self.set_up_suspended(self.default_mesh, tracer = self.fixed_tracer)
+            self.set_up_suspended(self.default_mesh)
             self.set_up_bedload(self.default_mesh)
         else:
-            self.set_up_suspended(mesh, tracer = self.fixed_tracer)
-            self.set_up_bedload(mesh)
+            self.set_up_suspended(mesh)
+            self.set_up_bedload(mesh)       
         
     def set_source_tracer(self, fs, solver_obj=None, init=False):
         if init:
@@ -170,7 +148,13 @@ class MudBeachOptions(MorphOptions):
         return self.quadratic_drag_coefficient
 
     def get_cfactor(self):
-        return Function(self.P1DG).interpolate(Constant(0.002))
+        try:
+            assert hasattr(self, 'depth')
+        except AssertionError:
+            raise ValueError("Depth is undefined.")
+        self.ksp = Constant(3*self.average_size)
+        hclip = conditional(self.ksp > self.depth, self.ksp, self.depth)
+        return Function(self.P1DG).interpolate(conditional(self.depth > self.ksp, 2*((2.5*ln(11.036*hclip/self.ksp))**(-2)), Constant(0.0)))
 
     def set_manning_drag_coefficient(self, fs):
         if self.friction == 'manning':
@@ -182,9 +166,15 @@ class MudBeachOptions(MorphOptions):
 
     def set_bathymetry(self, fs, **kwargs):
 
+        initialdepth = Constant(0.297)
+        depth_riv = Constant(initialdepth - 0.397)
+        depth_trench = Constant(depth_riv - 0.15)
+        depth_diff = depth_trench - depth_riv
         x, y = SpatialCoordinate(fs.mesh())
+        trench = conditional(le(x, 5), (0.1*(y-0.55)) + depth_riv, conditional(le(x, 6.5), (0.1*(y-0.55)) + (1/1.5)*depth_diff*(x-6.5) + depth_trench,
+                        conditional(le(x, 9.5), (0.1*(y-0.55)) + depth_trench, conditional(le(x, 11), (0.1*(y-0.55)) - (1/1.5)*depth_diff*(x-11) + depth_riv, (0.1*(y-0.55)) + depth_riv))))
         self.bathymetry = Function(fs, name="Bathymetry")
-        self.bathymetry.interpolate(4.5 - x/1000)
+        self.bathymetry.interpolate(-trench)
         return self.bathymetry
 
     def set_viscosity(self, fs):
@@ -196,46 +186,35 @@ class MudBeachOptions(MorphOptions):
         return
 
     def set_boundary_conditions(self, fs):
-        if not hasattr(self, 'flux_in'):
-            self.set_boundary_flux()
-        if not hasattr(self, 'depth'):
-            d_init = Function(self.elev_init.function_space).interpolate(self.elev_init + self.bathymetry.at([0,0]))
-        self.flux_in.assign(self.flux_func(0.0, self.depth))
         inflow_tag = 1
+        outflow_tag = 2
         boundary_conditions = {}
-        boundary_conditions[inflow_tag] = {'flux': self.flux_in,}
+        boundary_conditions[inflow_tag] = {'flux': Constant(-0.22)}
+        boundary_conditions[outflow_tag] = {'elev': Constant(0.397)}
         return boundary_conditions
-
-    def update_boundary_conditions(self, solver_obj, t=0.0):
-        depth = Function(self.P1DG).interpolate(solver_obj.depth.get_total_depth(self.ocean_elev_func(t)))
-        self.flux_in.assign(self.flux_func(t, depth))
-
-    def set_initial_condition(self, fs):
-        self.initial_value = Function(fs, name="Initial condition")
-        u, eta = self.initial_value.split()
-        u.interpolate(as_vector([1.0e-7, 0.0]))
-        eta.assign(0.0)
-        return self.initial_value
 
     def set_boundary_conditions_tracer(self, fs):
-        if not hasattr(self, 'tracer_flux_value'):
-            self.tracer_flux_value = Constant(0.0)
-        self.tracer_flux_value.assign(self.tracer_func(0.0))
         inflow_tag = 1
         boundary_conditions = {}
-        boundary_conditions[inflow_tag] = {'value': self.tracer_flux_value}
+        boundary_conditions[inflow_tag] = {'value': self.tracer_init_value}
         return boundary_conditions
-    
-    def update_boundary_conditions_tracer(self, t=0.0):
-        self.tracer_flux_value.assign(self.tracer_func(t))
+
+    def set_initial_condition(self, fs):
+        """
+        Set initial elevation and velocity using asymptotic solution.
+
+        :arg fs: `FunctionSpace` in which the initial condition should live.
+        """
+        self.initial_value = Function(fs, name="Initial condition")
+        u, eta = self.initial_value.split()
+        u.project(self.uv_init)
+        eta.project(self.elev_init)
+        return self.initial_value
 
     def get_update_forcings(self, solver_obj):
 
         def update_forcings(t):
-            
-            self.update_boundary_conditions(solver_obj, t=t)
-            self.update_boundary_conditions_tracer(t=t)
-          
+                       
             self.update_key_hydro(solver_obj)
             
             if self.t_old.dat.data[:] == t:
@@ -290,14 +269,10 @@ class MudBeachOptions(MorphOptions):
 
     def get_export_func(self, solver_obj):
         self.bath_export = solver_obj.fields.bathymetry_2d
-        bathymetry_displacement = solver_obj.depth.wd_bathymetry_displacement
-        eta = solver_obj.fields.elev_2d        
 
         def export_func():
-            self.eta_tilde.project(eta + bathymetry_displacement(eta))
-            self.eta_tilde_file.write(self.eta_tilde) 
             self.bath_file.write(self.bath_export)
-        return export_func 
+        return export_func
 
     def set_boundary_surface(self):
         """Set the initial displacement of the boundary elevation."""
