@@ -58,7 +58,7 @@ class MudBeachOptions(MorphOptions):
 
         self.bathymetry_file = File(self.di + "/bathy.pvd")
 
-        self.num_hours = 3650*24
+        self.num_hours = 3650*24*2
 
         self.t_old = Constant(0.0)
         # Stabilisation
@@ -83,7 +83,7 @@ class MudBeachOptions(MorphOptions):
 
         # Time integration
 
-        self.dt = 75
+        self.dt = 150
         self.end_time = self.num_hours*3600.0/self.morfac
         self.dt_per_export = 200
         self.dt_per_remesh = 200
