@@ -56,13 +56,14 @@ class SteadyProblem():
         self.boundary_conditions = op.set_boundary_conditions(self.V)
 
         # Outputs
-        self.di = create_directory(self.op.di)
-        self.solution_file = File(os.path.join(self.di, 'solution.pvd'))
-        self.solution_fpath_hdf5 = os.path.join(self.di, 'solution.hdf5')
-        self.adjoint_solution_file = File(os.path.join(self.di, 'adjoint_solution.pvd'))
-        self.adjoint_solution_fpath_hdf5 = os.path.join(self.di, 'adjoint_solution.hdf5')
-        self.indicator_file = File(os.path.join(self.di, 'indicator.pvd'))
-        self.monitor_file = File(os.path.join(self.di, 'monitor.pvd'))
+        if self.op.export_intermediate:
+            self.di = create_directory(self.op.di)
+            self.solution_file = File(os.path.join(self.di, 'solution.pvd'))
+            self.solution_fpath_hdf5 = os.path.join(self.di, 'solution.hdf5')
+            self.adjoint_solution_file = File(os.path.join(self.di, 'adjoint_solution.pvd'))
+            self.adjoint_solution_fpath_hdf5 = os.path.join(self.di, 'adjoint_solution.hdf5')
+            self.indicator_file = File(os.path.join(self.di, 'indicator.pvd'))
+            self.monitor_file = File(os.path.join(self.di, 'monitor.pvd'))
 
         # Storage during inner mesh adaptation loop
         self.indicators = {}
@@ -809,8 +810,11 @@ class SteadyProblem():
                 op_copy = type(self.op)(mesh=am_copy.mesh, input_dir = self.op.input_dir)
             else:
                 op_copy = type(self.op)(mesh=am_copy.mesh)
+            
+            export_bool = op_copy.export_intermediate
 
             op_copy.update(self.op)
+            op_copy.export_intermediate = export_bool
 
             tmp = type(self)(op_copy, mesh=am_copy.mesh, discrete_adjoint=self.discrete_adjoint,
                              prev_solution=self.prev_solution, levels=self.levels)
@@ -1085,7 +1089,8 @@ class UnsteadyProblem(SteadyProblem):
             self.adjoint_solution_old.assign(self.adjoint_solution)
         else:
             self.solution_old.assign(self.solution)
-        self.plot_solution()
+        if self.op.export_intermediate:
+            self.plot_solution()
 
     def solve_step(self, adjoint=False):
         """

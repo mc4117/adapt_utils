@@ -23,6 +23,7 @@ class Options(FrozenConfigurable):
     dt_per_export = PositiveFloat(10, help="Number of timesteps per export.").tag(config=True)
     dt_per_remesh = PositiveFloat(20, help="Number of timesteps per mesh adaptation.").tag(config=True)
     use_automatic_timestep = Bool(False).tag(config=True)
+    export_intermediate = Bool(True).tag(config=True)
 
     # Boundary conditions
     boundary_conditions = PETScSolverParameters({}, help="Boundary conditions expressed as a dictionary.").tag(config=True)

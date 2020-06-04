@@ -4,6 +4,7 @@ import pylab as plt
 import pandas as pd
 import numpy as np
 import time
+import datetime
 
 from adapt_utils.test_cases.beach.options import BeachOptions
 from adapt_utils.swe.solver import UnsteadyShallowWaterProblem
@@ -12,6 +13,9 @@ from adapt_utils.norms import local_frobenius_norm
 
 nx = 0.25
 
+ts = time.time()
+st = datetime.datetime.fromtimestamp(ts).strftime('%Y-%m-%d %H:%M:%S')
+outputdir = 'outputs' + st
 
 op = BeachOptions(approach='monge_ampere',
                    plot_timeseries=False,
@@ -24,7 +28,8 @@ op = BeachOptions(approach='monge_ampere',
                    ny=1,
                    input_dir = 'hydrodynamics_beach_l_sep_nx_55.0',                   
                    r_adapt_rtol=1.0e-3,
-                   init = True)
+                   init = True,
+                   output_dir = outputdir)
 
 swp = UnsteadyShallowWaterProblem(op, levels=0)
 swp.setup_solver()
@@ -51,8 +56,7 @@ def wet_dry_interface_monitor(mesh, alpha=20.0, beta=1.0):
     #diff_proj = project(diff, P1)
     horizontal_velocity = interpolate(uv[0], P1_current)    
     #eta_gradient = recovery.construct_gradient(eta)
-    #eta_dx_sq = interpolate(pow(eta_gradi
-    ent, 2), P1_current)
+    #eta_dx_sq = interpolate(pow(eta_gradient, 2), P1_current)
 
     uv_gradient = recovery.construct_gradient(horizontal_velocity)
     uv_dx = interpolate(pow(uv_gradient[0], 2), P1_current)
