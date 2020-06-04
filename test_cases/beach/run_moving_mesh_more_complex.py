@@ -30,7 +30,7 @@ swp = UnsteadyShallowWaterProblem(op, levels=0)
 swp.setup_solver()
 
 
-def wet_dry_interface_monitor(mesh, alpha=20.0, beta=1.0, gamma = 1.0):  
+def wet_dry_interface_monitor(mesh, alpha=5.0, beta=1.0, gamma = 0):
     """
     Monitor function focused around the wet-dry interface.
 
@@ -59,10 +59,10 @@ def wet_dry_interface_monitor(mesh, alpha=20.0, beta=1.0, gamma = 1.0):
                                           div_uv/(beta*max(div_uv.dat.data[:])) , Constant(1)), P1_current)
     
     u_hess = recovery.construct_hessian(horizontal_velocity, op=op)
-    frob_u_hess = Function(horizontal_velocity.function_space()).project(local_frobenius_norm(u_hess))
-    frob_u_hess_star = interpolate(conditional(frob_u_hess/(gamma * max(frob_u_hess.dat.data[:])) < Constant(1), frob_u_hess/(gamma * max(frob_u_hess.dat.data[:])), Constant(1)), P1_current)
+    #frob_u_hess = Function(horizontal_velocity.function_space()).project(local_frobenius_norm(u_hess))
+    #frob_u_hess_star = interpolate(conditional(frob_u_hess/(gamma * max(frob_u_hess.dat.data[:])) < Constant(1), frob_u_hess/(gamma * max(frob_u_hess.dat.data[:])), Constant(1)), P1_current)
     
-    comp = interpolate(conditional(frob_u_hess_star > div_uv_star, frob_u_hess_star, div_uv_star)**2, P1_current)      
+    comp = interpolate(div_uv_star**2, P1_current) #conditional(frob_u_hess_star > div_uv_star, frob_u_hess_star, div_uv_star)**2, P1_current)      
     comp_new = project(comp, P1)
     comp_new2 = project(conditional(comp_new > Constant(0.0), comp_new, Constant(0.0)), P1)
     mon_init = project(sqrt(1.0 + alpha * comp_new2), P1)

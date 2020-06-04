@@ -14,6 +14,7 @@ adjoint.py
 *.ipynb_checkpoints
 *.hdf5
 *.pyc
+log
 
 tracer/*
 case_studies/*

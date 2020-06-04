@@ -30,7 +30,7 @@ swp = UnsteadyShallowWaterProblem(op, levels=0)
 swp.setup_solver()
 
 
-def wet_dry_interface_monitor(mesh, alpha=20.0, beta=1.0):  
+def wet_dry_interface_monitor(mesh, alpha=10.0, beta=1.0):  
     """
     Monitor function focused around the wet-dry interface.
 
@@ -51,8 +51,7 @@ def wet_dry_interface_monitor(mesh, alpha=20.0, beta=1.0):
     #diff_proj = project(diff, P1)
     horizontal_velocity = interpolate(uv[0], P1_current)    
     #eta_gradient = recovery.construct_gradient(eta)
-    #eta_dx_sq = interpolate(pow(eta_gradi
-    ent, 2), P1_current)
+    #eta_dx_sq = interpolate(pow(eta_gradient, 2), P1_current)
 
     uv_gradient = recovery.construct_gradient(horizontal_velocity)
     uv_dx = interpolate(pow(uv_gradient[0], 2), P1_current)

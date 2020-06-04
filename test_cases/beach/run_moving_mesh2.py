@@ -22,7 +22,7 @@ op = BeachOptions(approach='monge_ampere',
                    friction='manning',
                    nx=nx,
                    ny=1,
-                   input_dir = 'hydrodynamics_beach_l_sep_nx_55.0',                   
+                   input_dir = 'hydrodynamics_beach_l_sep_nx_55.0',
                    r_adapt_rtol=1.0e-3,
                    init = True)
 
@@ -30,7 +30,7 @@ swp = UnsteadyShallowWaterProblem(op, levels=0)
 swp.setup_solver()
 
 
-def wet_dry_interface_monitor(mesh, alpha=1000.0, beta=1.0):  
+def wet_dry_interface_monitor(mesh, alpha=500.0, beta=1.0):
     """
     Monitor function focused around the wet-dry interface.
 
@@ -40,7 +40,7 @@ def wet_dry_interface_monitor(mesh, alpha=1000.0, beta=1.0):
     :kwarg beta: controls the level of refinement in this region.
     """
     P1 = FunctionSpace(mesh, "CG", 1)
-    
+
     eta = swp.solution.split()[1]
 
     b = swp.solver_obj.fields.bathymetry_2d
@@ -49,18 +49,18 @@ def wet_dry_interface_monitor(mesh, alpha=1000.0, beta=1.0):
     P1_current = FunctionSpace(current_mesh, "CG", 1)
 
     bath_gradient = recovery.construct_gradient(b)
-    bath_dx_sq = interpolate(pow(bath_gradient[0], 2), P1_current)    
+    bath_dx_sq = interpolate(pow(bath_gradient[0], 2), P1_current)
 
     bath_dx_new = project(bath_dx_sq, P1)
     bath_dx_new2 = project(conditional(bath_dx_new > Constant(0.0), bath_dx_new, Constant(0.0)), P1)
     mon_init = project(sqrt(1.0 + alpha * bath_dx_new2), P1)
 
     #return 1.0 + alpha*pow(cosh(beta*diff_proj), -2)
-    
+
     H = Function(P1)
     tau = TestFunction(P1)
     n = FacetNormal(mesh)
-    
+
     K = 10*(0.4**2)/4
     a = (inner(tau, H)*dx)+(K*inner(grad(tau), grad(H))*dx) - (K*(tau*inner(grad(H), n)))*ds
     a -= inner(tau, mon_init)*dx
@@ -85,7 +85,7 @@ baththetis1 = []
 for i in np.linspace(0, 219, 220):
     xaxisthetis1.append(i)
     baththetis1.append(-bath.at([i, 5]))
-    
+
 df = pd.concat([pd.DataFrame(xaxisthetis1, columns = ['x']), pd.DataFrame(baththetis1, columns = ['bath'])], axis = 1)
 
 df_real = pd.read_csv('final_result_nx2.csv')
