@@ -24,7 +24,7 @@ class BeachOptions(MorphOptions):
     mudflats." Continental Shelf Research 20.10-11 (2000): 1079-1097.
     """
 
-    def __init__(self, friction='manning', plot_timeseries=False, nx=1, ny=1, mesh = None, input_dir = None, **kwargs):
+    def __init__(self, friction='manning', plot_timeseries=False, nx=1, ny=1, mesh = None, input_dir = None, output_dir = None, **kwargs):
 
         super(BeachOptions, self).__init__(**kwargs)
         
@@ -36,6 +36,11 @@ class BeachOptions(MorphOptions):
         
         self.lx = 220
         self.ly = 10
+
+        if output_dir is not None:
+            self.di = output_dir
+        else:
+            self.export_intermediate = False
 
         self.plot_timeseries = plot_timeseries
         if mesh is None:
@@ -58,7 +63,8 @@ class BeachOptions(MorphOptions):
 
         self.grad_depth_viscosity = True
 
-        self.bathymetry_file = File(self.di + "/bathy.pvd")
+        if self.export_intermediate:
+            self.bathymetry_file = File(self.di + "/bathy.pvd")
 
         self.num_hours = 6
 
@@ -106,14 +112,10 @@ class BeachOptions(MorphOptions):
         
     def set_up_morph_model(self, mesh = None):
 
-        ts = time.time()
-        st = datetime.datetime.fromtimestamp(ts).strftime('%Y-%m-%d %H:%M:%S')
-        outputdir = 'outputs' + st
-
-        self.di = outputdir  # "morph_output"
         # Outputs
-        self.bath_file = File(os.path.join(self.di, 'bath_export.pvd'))
-        self.eta_tilde_file = File(os.path.join(self.di, 'eta_tilde.pvd'))
+        if self.export_intermediate:
+            self.bath_file = File(os.path.join(self.di, 'bath_export.pvd'))
+            self.eta_tilde_file = File(os.path.join(self.di, 'eta_tilde.pvd'))
         self.eta_tilde = Function(self.P1DG, name='Modified elevation')        
 
         # Physical
@@ -275,14 +277,14 @@ class BeachOptions(MorphOptions):
             chk = DumbCheckpoint(inputdir + "/elevation", mode=FILE_READ)
             elev_init = Function(DG_2d, name="elevation")
             chk.load(elev_init)
-            File(outputdir + "/elevation_imported.pvd").write(elev_init)
+            #File(outputdir + "/elevation_imported.pvd").write(elev_init)
             chk.close()
         # velocity
         with timed_stage('initialising velocity'):
             chk = DumbCheckpoint(inputdir + "/velocity" , mode=FILE_READ)
             uv_init = Function(vector_dg, name="velocity")
             chk.load(uv_init)
-            File(outputdir + "/velocity_imported.pvd").write(uv_init)
+            #File(outputdir + "/velocity_imported.pvd").write(uv_init)
             chk.close()
 
         return  elev_init, uv_init, 
