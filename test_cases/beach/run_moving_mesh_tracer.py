@@ -3,6 +3,7 @@ from thetis import *
 from adapt_utils.test_cases.beach.options import BeachOptions
 from adapt_utils.swe.solver import UnsteadyShallowWaterProblem
 
+import pandas as pd
 import time
 import datetime
 
@@ -61,3 +62,20 @@ def tracer_interface_monitor(mesh, alpha=1.0, beta=3000.0):
 
 swp.monitor_function = tracer_interface_monitor
 swp.solve(uses_adjoint=False)
+
+new_mesh = RectangleMesh(220*2, 10, 220, 10)
+
+bath = Function(FunctionSpace(new_mesh, "CG", 1)).project(swp.solver_obj.fields.bathymetry_2d)
+
+xaxisthetis1 = []
+baththetis1 = []
+
+for i in np.linspace(0, 219, 220):
+    xaxisthetis1.append(i)
+    baththetis1.append(-bath.at([i, 5]))
+    
+df = pd.concat([pd.DataFrame(xaxisthetis1, columns = ['x']), pd.DataFrame(baththetis1, columns = ['bath'])], axis = 1)
+
+df_real = pd.read_csv('final_result_nx2.csv')
+
+print(sum([(df['bath'][i] - df_real['bath'][i])**2 for i in range(len(df_real))]))

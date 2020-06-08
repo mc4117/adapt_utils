@@ -53,7 +53,7 @@ def wet_dry_interface_monitor(mesh, alpha=20.0, beta=1.0, gamma = 0):
     current_mesh = eta.function_space().mesh()
     P1_current = FunctionSpace(current_mesh, "CG", 1)
 
-    horizontal_velocity = interpolate(uv[0], P1_current)    
+    horizontal_velocity = interpolate(uv[0], P1_current)
     
     abs_horizontal_velocity = interpolate(abs(horizontal_velocity), P1_current)
 
