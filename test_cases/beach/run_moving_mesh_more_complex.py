@@ -4,6 +4,7 @@ import pylab as plt
 import pandas as pd
 import numpy as np
 import time
+import datetime
 
 from adapt_utils.test_cases.beach.options import BeachOptions
 from adapt_utils.swe.solver import UnsteadyShallowWaterProblem
@@ -12,6 +13,9 @@ from adapt_utils.norms import local_frobenius_norm
 
 nx = 0.25
 
+ts = time.time()
+st = datetime.datetime.fromtimestamp(ts).strftime('%Y-%m-%d %H:%M:%S')
+outputdir = 'outputs' + st
 
 op = BeachOptions(approach='monge_ampere',
                    plot_timeseries=False,
@@ -22,7 +26,8 @@ op = BeachOptions(approach='monge_ampere',
                    friction='manning',
                    nx=nx,
                    ny=1,
-                   input_dir = 'hydrodynamics_beach_l_sep_nx_55.0',                   
+                   input_dir = 'hydrodynamics_beach_l_sep_nx_55.0',
+                   output_dir = outputdir,
                    r_adapt_rtol=1.0e-3,
                    init = True)
 
@@ -30,7 +35,7 @@ swp = UnsteadyShallowWaterProblem(op, levels=0)
 swp.setup_solver()
 
 
-def wet_dry_interface_monitor(mesh, alpha=5.0, beta=1.0, gamma = 0):
+def wet_dry_interface_monitor(mesh, alpha=10.0, beta=1.0, gamma = 0):
     """
     Monitor function focused around the wet-dry interface.
 

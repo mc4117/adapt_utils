@@ -85,13 +85,15 @@ class BeachOptions(MorphOptions):
         omega = 0.5  # Ocean boundary forcing frequency
         self.ocean_elev_func = lambda t: (h_amp * np.cos(-omega *(t+(100.0))))
         self.ocean_vel_func = lambda t: (v_amp * np.cos(-omega *(t+(100.0))))
+        
+        self.fixed_tracer = Constant(0.0)        
 
         # Time integration
 
         self.dt = 0.05
         self.end_time = self.num_hours*3600.0/self.morfac
-        self.dt_per_export = 60
-        self.dt_per_remesh = 60
+        self.dt_per_export = 60#20
+        self.dt_per_remesh = 60#20
         self.timestepper = 'CrankNicolson'
         self.implicitness_theta = 1.0       
         
@@ -148,10 +150,10 @@ class BeachOptions(MorphOptions):
         self.eta_d = Function(self.P1DG).project(self.elev_init)
         
         if mesh is None:
-            self.set_up_suspended(self.default_mesh)
+            self.set_up_suspended(self.default_mesh, tracer = self.fixed_tracer)
             self.set_up_bedload(self.default_mesh)
         else:
-            self.set_up_suspended(mesh)
+            self.set_up_suspended(mesh, tracer = self.fixed_tracer)
             self.set_up_bedload(mesh)
         
     def set_source_tracer(self, fs, solver_obj=None, init=False):
