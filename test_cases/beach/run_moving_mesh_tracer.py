@@ -3,6 +3,7 @@ from thetis import *
 from adapt_utils.test_cases.beach.options import BeachOptions
 from adapt_utils.swe.solver import UnsteadyShallowWaterProblem
 
+import pandas as pd
 import time
 import datetime
 import pandas as pd
@@ -79,4 +80,3 @@ df = pd.concat([pd.DataFrame(xaxisthetis1, columns = ['x']), pd.DataFrame(bathth
 df_real = pd.read_csv('final_result_nx2.csv')
 
 print(sum([(df['bath'][i] - df_real['bath'][i])**2 for i in range(len(df_real))]))
-
