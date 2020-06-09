@@ -13,7 +13,7 @@ from adapt_utils.norms import local_frobenius_norm
 
 nx = 0.25
 
-alpha_star = 5
+alpha_star = 20.0
 
 ts = time.time()
 st = datetime.datetime.fromtimestamp(ts).strftime('%Y-%m-%d %H:%M:%S')
@@ -37,7 +37,7 @@ swp = UnsteadyShallowWaterProblem(op, levels=0)
 swp.setup_solver()
 
 
-def wet_dry_interface_monitor(mesh, alpha=alpha_star, beta=1.0, gamma = 0):
+def wet_dry_interface_monitor(mesh, alpha=alpha_star, beta=1.0):
     """
     Monitor function focused around the wet-dry interface.
 
@@ -59,20 +59,12 @@ def wet_dry_interface_monitor(mesh, alpha=alpha_star, beta=1.0, gamma = 0):
     
     abs_horizontal_velocity = interpolate(abs(horizontal_velocity), P1_current)
 
-
-    uv_gradient = recovery.construct_gradient(horizontal_velocity)
-    uv_dx = interpolate(pow(uv_gradient[0], 2), P1_current)
-    uv_dy = interpolate(pow(uv_gradient[1], 2), P1_current)
-    div_uv = interpolate(sqrt(uv_dx + uv_dy), P1_current)
-    div_uv_star = interpolate(conditional(div_uv/(beta*max(div_uv.dat.data[:])) < Constant(1), 
-                                          div_uv/(beta*max(div_uv.dat.data[:])) , Constant(1)), P1_current)
-    
     abs_uv_star = interpolate(conditional(abs_horizontal_velocity/(beta*max(abs_horizontal_velocity.dat.data[:])) < Constant(1), 
                                      abs_horizontal_velocity/(beta*max(abs_horizontal_velocity.dat.data[:])) , Constant(1)), P1_current)
     
-    comp = interpolate(conditional(abs_uv_star > div_uv_star, abs_uv_star, div_uv_star)**2, P1_current)      
+    comp = interpolate(abs_uv_star**2, P1_current)      
     comp_new = project(comp, P1)
-    comp_new2 = project(conditional(comp_new > Constant(0.0), comp_new, Constant(0.0)), P1)
+    comp_new2 = interpolate(conditional(comp_new > Constant(0.0), comp_new, Constant(0.0)), P1)
     mon_init = project(sqrt(1.0 + alpha * comp_new2), P1)
     
     H = Function(P1)
@@ -105,6 +97,5 @@ df = pd.concat([pd.DataFrame(xaxisthetis1, columns = ['x']), pd.DataFrame(bathth
 
 df_real = pd.read_csv('final_result_nx2.csv')
 
-print(sum([(df['bath'][i] - df_real['bath'][i])**2 for i in range(len(df_real))]))
-
 print(alpha_star)
+print(sum([(df['bath'][i] - df_real['bath'][i])**2 for i in range(len(df_real))]))
