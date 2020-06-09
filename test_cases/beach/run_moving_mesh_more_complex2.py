@@ -13,6 +13,8 @@ from adapt_utils.norms import local_frobenius_norm
 
 nx = 0.25
 
+alpha_star = 5
+
 ts = time.time()
 st = datetime.datetime.fromtimestamp(ts).strftime('%Y-%m-%d %H:%M:%S')
 outputdir = 'outputs' + st
@@ -35,7 +37,7 @@ swp = UnsteadyShallowWaterProblem(op, levels=0)
 swp.setup_solver()
 
 
-def wet_dry_interface_monitor(mesh, alpha=20.0, beta=1.0, gamma = 0):
+def wet_dry_interface_monitor(mesh, alpha=alpha_star, beta=1.0, gamma = 0):
     """
     Monitor function focused around the wet-dry interface.
 
@@ -104,3 +106,5 @@ df = pd.concat([pd.DataFrame(xaxisthetis1, columns = ['x']), pd.DataFrame(bathth
 df_real = pd.read_csv('final_result_nx2.csv')
 
 print(sum([(df['bath'][i] - df_real['bath'][i])**2 for i in range(len(df_real))]))
+
+print(alpha_star)
