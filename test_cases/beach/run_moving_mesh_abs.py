@@ -13,7 +13,7 @@ from adapt_utils.norms import local_frobenius_norm
 
 nx = 0.25
 
-alpha_star = 20.0
+alpha_star = 35
 
 ts = time.time()
 st = datetime.datetime.fromtimestamp(ts).strftime('%Y-%m-%d %H:%M:%S')
@@ -76,6 +76,7 @@ def wet_dry_interface_monitor(mesh, alpha=alpha_star, beta=1.0):
 
     return H
 
+t1 = time.time()
 
 swp.monitor_function = wet_dry_interface_monitor
 swp.solve(uses_adjoint=False)
@@ -99,3 +100,13 @@ df_real = pd.read_csv('final_result_nx2.csv')
 
 print(alpha_star)
 print(sum([(df['bath'][i] - df_real['bath'][i])**2 for i in range(len(df_real))]))
+
+print("total time: ")
+print(t2-t1)
+
+f = open("adapt_output/output_abs_norm_" + str(nx) + '_' + str(alpha_star) + '.txt', "w+")
+f.write(str(sum([(df['bath'][i] - df_real['bath'][i])**2 for i in range(len(df_real))])))
+f.write("\n")
+f.write(str(t2-t1))
+f.close()
+

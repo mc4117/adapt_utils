@@ -13,7 +13,7 @@ from adapt_utils.norms import local_frobenius_norm
 
 nx = 0.25
 
-alpha_star = 20.0
+alpha_star = 35.0
 
 ts = time.time()
 st = datetime.datetime.fromtimestamp(ts).strftime('%Y-%m-%d %H:%M:%S')
@@ -84,6 +84,7 @@ def wet_dry_interface_monitor(mesh, alpha=alpha_star, beta=1.0):
 
     return H
 
+t1 = time.time()
 
 swp.monitor_function = wet_dry_interface_monitor
 swp.solve(uses_adjoint=False)
