@@ -14,7 +14,7 @@ df_real = pd.read_csv('final_result_nx2.csv')
 
 df_test = pd.read_csv('final_result_nx1.5.csv')
 
-df_test1 = pd.read_csv('final_result_nx1.csv')
+df_test1 = pd.read_csv('final_result_nx1.0.csv')
 
 df_test2 = pd.read_csv('final_result_nx0.75.csv')
 
