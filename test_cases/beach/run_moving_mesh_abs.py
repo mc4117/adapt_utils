@@ -99,3 +99,12 @@ df_real = pd.read_csv('final_result_nx2.csv')
 
 print(alpha_star)
 print(sum([(df['bath'][i] - df_real['bath'][i])**2 for i in range(len(df_real))]))
+
+print("total time: ")
+print(t2-t1)
+
+f = open("adapt_output/output_abs_norm_" + str(nx) + '_' + str(alpha_star) + '.txt', "w+")
+f.write(str(sum([(df['bath'][i] - df_real['bath'][i])**2 for i in range(len(df_real))])))
+f.write("\n")
+f.write(str(t2-t1))
+f.close()
