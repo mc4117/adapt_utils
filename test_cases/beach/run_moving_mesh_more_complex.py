@@ -61,9 +61,7 @@ def wet_dry_interface_monitor(mesh, alpha=alpha_star, beta=1.0):
 
 
     uv_gradient = recovery.construct_gradient(horizontal_velocity)
-    uv_dx = interpolate(pow(uv_gradient[0], 2), P1_current)
-    uv_dy = interpolate(pow(uv_gradient[1], 2), P1_current)
-    div_uv = interpolate(sqrt(uv_dx + uv_dy), P1_current)
+    div_uv = interpolate(sqrt(inner(uv_gradient, uv_gradient)), P1_current)
     div_uv_star = interpolate(conditional(div_uv/(beta*max(div_uv.dat.data[:])) < Constant(1), 
                                           div_uv/(beta*max(div_uv.dat.data[:])) , Constant(1)), P1_current)
     
