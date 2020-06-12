@@ -23,14 +23,14 @@ df_test3 = pd.read_csv('final_result_nx0.5.csv')
 df_test4 = pd.read_csv('final_result_nx0.25.csv')
 
 error_list = []
-#error_list.append(0.0)
+error_list.append(0.0)
 error_list.append(sum([(df_test['bath'][i] - df_real['bath'][i])**2 for i in range(len(df_real))]))
 error_list.append(sum([(df_test1['bath'][i] - df_real['bath'][i])**2 for i in range(len(df_real))]))
 error_list.append(sum([(df_test2['bath'][i] - df_real['bath'][i])**2 for i in range(len(df_real))]))
 error_list.append(sum([(df_test3['bath'][i] - df_real['bath'][i])**2 for i in range(len(df_real))]))
 error_list.append(sum([(df_test4['bath'][i] - df_real['bath'][i])**2 for i in range(len(df_real))]))
 print(error_list)
-#plt.plot([0.5, 2/3, 1, 4/3, 2, 4], error_list)
+plt.plot([0.5, 2/3, 1, 4/3, 2, 4], error_list)
 
 plt.loglog([2/3, 1, 4/3, 2, 4], error_list, '-o')
 plt.ylabel('Error norm (m)')
