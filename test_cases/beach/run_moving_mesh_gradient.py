@@ -11,7 +11,7 @@ from adapt_utils.swe.solver import UnsteadyShallowWaterProblem
 from adapt_utils.adapt import recovery
 from adapt_utils.norms import local_frobenius_norm
 
-nx = 0.25
+nx = 0.5
 
 alpha_star = 50.0
 
@@ -28,7 +28,7 @@ op = BeachOptions(approach='monge_ampere',
                    friction='manning',
                    nx=nx,
                    ny=1,
-                   input_dir = 'hydrodynamics_beach_l_sep_nx_55.0',
+                   input_dir = 'hydrodynamics_beach_l_sep_nx_110.0',
                    output_dir = outputdir,
                    r_adapt_rtol=1.0e-3,
                    init = True)
@@ -112,3 +112,4 @@ f.write(str(sum([(df['bath'][i] - df_real['bath'][i])**2 for i in range(len(df_r
 f.write("\n")
 f.write(str(t2-t1))
 f.close()
+
