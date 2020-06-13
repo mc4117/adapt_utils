@@ -12,8 +12,8 @@ from adapt_utils.adapt import recovery
 from adapt_utils.norms import local_frobenius_norm
 
 nx = 0.75
-
-alpha_star = 50
+print('changed mon')
+alpha_star = 0
 
 ts = time.time()
 st = datetime.datetime.fromtimestamp(ts).strftime('%Y-%m-%d %H:%M:%S')
@@ -65,16 +65,16 @@ def wet_dry_interface_monitor(mesh, alpha=alpha_star, beta=1.0):
     comp = interpolate(abs_uv_star**2, P1_current)      
     comp_new = project(comp, P1)
     comp_new2 = interpolate(conditional(comp_new > Constant(0.0), comp_new, Constant(0.0)), P1)
-    mon_init = project(sqrt(1.0 + alpha * comp_new2), P1)
-    
+    mon_init = project(sqrt(Constant(1.0) + alpha * comp_new2), P1)
+    """
     H = Function(P1)
     tau = TestFunction(P1)
     
     K = 100*(0.4**2)/4
     a = (inner(tau, H)*dx)+(K*inner(tau.dx(1), H.dx(1))*dx) - inner(tau, mon_init)*dx
     solve(a == 0, H)    
-
-    return H
+    """
+    return mon_init
 
 t1 = time.time()
 
