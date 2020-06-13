@@ -92,8 +92,8 @@ class BeachOptions(MorphOptions):
 
         self.dt = 0.05
         self.end_time = self.num_hours*3600.0/self.morfac
-        self.dt_per_export = 60#20
-        self.dt_per_remesh = 60#20
+        self.dt_per_export = ex
+        self.dt_per_remesh = ex
         self.timestepper = 'CrankNicolson'
         self.implicitness_theta = 1.0       
         

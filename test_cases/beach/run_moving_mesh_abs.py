@@ -13,7 +13,8 @@ from adapt_utils.norms import local_frobenius_norm
 
 nx = 0.75
 print('changed mon')
-alpha_star = 0
+alpha_star = 20
+ex = 20
 
 ts = time.time()
 st = datetime.datetime.fromtimestamp(ts).strftime('%Y-%m-%d %H:%M:%S')
@@ -31,6 +32,7 @@ op = BeachOptions(approach='monge_ampere',
                    input_dir = 'hydrodynamics_beach_l_sep_nx_165.0',
                    output_dir = outputdir,
                    r_adapt_rtol=1.0e-3,
+                   export = ex,
                    init = True)
 
 swp = UnsteadyShallowWaterProblem(op, levels=0)
