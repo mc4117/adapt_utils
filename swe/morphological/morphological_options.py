@@ -23,18 +23,18 @@ class MorphOptions(ShallowWaterOptions):
         self.bedload = True
         self.implicit_source = False
         self.fixed_tracer = None
+        self.solve_tracer = True
+
         super(MorphOptions, self).__init__(**kwargs)
 
+    """
     def set_tracer_init(self, fs):
-        if self.fixed_tracer is not None:
-            return self.fixed_tracer
+        if self.tracer_init is not None:
+            return self.tracer_init
         else:
-            if self.conservative:
-                tracer_init = project(self.depth*self.ceq/self.coeff, fs)
-            else:
-                divisor = interpolate(self.ceq/self.coeff, self.ceq.function_space())
-                tracer_init = project(divisor, fs)
-            return tracer_init
+            #tracer_init = self.equiltracer
+            return self.equiltracer
+
 
     def set_up_suspended(self, mesh, tracer=None):
         P1 = FunctionSpace(mesh, "CG", 1)
@@ -366,3 +366,4 @@ class MorphOptions(ShallowWaterOptions):
 
         # add bedload transport to exner equation
         self.f += -(self.v*((self.qbx*self.n[0]) + (self.qby*self.n[1])))*ds(1) - (self.v*((self.qbx*self.n[0]) + (self.qby*self.n[1])))*ds(2) + (self.qbx*(self.v.dx(0)) + self.qby*(self.v.dx(1)))*dx
+    """
