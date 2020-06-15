@@ -60,8 +60,8 @@ def boundary_conditions_fn_balzano(bathymetry_2d, flag = None, morfac = 1, t_new
 # define mesh
 lx = 220
 ly = 10
-nx = np.int(lx*2.0)
-ny = 10
+nx = np.int(lx*4.0)
+ny = 10*2
 mesh2d = th.RectangleMesh(nx, ny, lx, ly)
 
 x,y = th.SpatialCoordinate(mesh2d)

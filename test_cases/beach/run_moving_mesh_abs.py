@@ -12,7 +12,7 @@ from adapt_utils.adapt import recovery
 from adapt_utils.norms import local_frobenius_norm
 
 nx = 0.75
-print('changed mon')
+#print('changed mon')
 alpha_star = 20
 ex = 20
 
@@ -32,7 +32,6 @@ op = BeachOptions(approach='monge_ampere',
                    input_dir = 'hydrodynamics_beach_l_sep_nx_165.0',
                    output_dir = outputdir,
                    r_adapt_rtol=1.0e-3,
-                   export = ex,
                    init = True)
 
 swp = UnsteadyShallowWaterProblem(op, levels=0)
@@ -68,15 +67,15 @@ def wet_dry_interface_monitor(mesh, alpha=alpha_star, beta=1.0):
     comp_new = project(comp, P1)
     comp_new2 = interpolate(conditional(comp_new > Constant(0.0), comp_new, Constant(0.0)), P1)
     mon_init = project(sqrt(Constant(1.0) + alpha * comp_new2), P1)
-    """
+
     H = Function(P1)
     tau = TestFunction(P1)
     
     K = 100*(0.4**2)/4
     a = (inner(tau, H)*dx)+(K*inner(tau.dx(1), H.dx(1))*dx) - inner(tau, mon_init)*dx
     solve(a == 0, H)    
-    """
-    return mon_init
+
+    return H
 
 t1 = time.time()
 
@@ -105,7 +104,8 @@ print(sum([(df['bath'][i] - df_real['bath'][i])**2 for i in range(len(df_real))]
 
 print("total time: ")
 print(t2-t1)
-
+print(ex)
+print('not changed')
 f = open("adapt_output/output_abs_norm_" + str(nx) + '_' + str(alpha_star) + '.txt', "w+")
 f.write(str(sum([(df['bath'][i] - df_real['bath'][i])**2 for i in range(len(df_real))])))
 f.write("\n")
