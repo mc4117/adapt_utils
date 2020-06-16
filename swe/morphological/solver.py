@@ -100,19 +100,19 @@ class UnsteadyShallowWaterProblem(UnsteadyProblem):
             if self.solution_old_tracer is not None:
                 self.tracer_interp = project(self.solution_old_tracer, self.P1DG)
             else:
-                self.tracer_interp = project(self.solver_obj.fields.tracer_2d, self.P1DG)
-                self.solution_old_tracer = project(self.solver_obj.fields.tracer_2d, self.P1DG)
+                self.tracer_interp = project(self.solver_obj.fields.sediment_2d, self.P1DG)
+                self.solution_old_tracer = project(self.solver_obj.fields.sediment_2d, self.P1DG)
 
         u_interp, eta_interp = self.solution.split()
 
         if self.op.suspended:
-            #if self.op.tracer_init is not None:
-            self.solver_obj.assign_initial_conditions(uv=u_interp, elev=eta_interp, tracer=self.tracer_interp)
+            if self.op.tracer_init is not None:
+                self.solver_obj.assign_initial_conditions(uv=u_interp, elev=eta_interp, sediment=self.tracer_interp)
 
         self.solver_obj.fields.bathymetry_2d.project(self.solution_old_bathymetry)
 
         self.solver_obj.options.simulation_end_time = self.step_end - 0.5*self.op.dt
-        self.op.update(self.solver_obj.options)
+        #self.op.update(self.solver_obj.options)
 
         self.solver_obj.iterate(update_forcings=self.op.get_update_forcings(self.solver_obj),
                                 export_func=self.op.get_export_func(self.solver_obj))
@@ -155,33 +155,20 @@ class UnsteadyShallowWaterProblem(UnsteadyProblem):
 
         # Initial conditions
         u_interp, eta_interp = self.solution.split()
-        self.uv_d, self.eta_d = self.solution.split()
-
-        options = self.solver_obj.options
-        
-
-        sed_mod = SedimentModel(options, suspendedload=op.suspended, convectivevel=op.convective_vel_flag,
-                            bedload=op.bedload, angle_correction=op.angle_correction, slope_eff=op.slope_eff, seccurrent=False,
-                            mesh2d=self.mesh, bathymetry_2d=b, 
-                            uv_init = self.uv_d, elev_init = self.eta_d, ks=op.ks, average_size=op.average_size, 
-                            cons_tracer = op.conservative, wetting_and_drying = op.wetting_and_drying, wetting_alpha = op.wetting_and_drying_alpha)
-
-
-
-        self.solver_obj.sediment_model = sed_mod
-        
         if op.suspended:
             if hasattr(self, 'solution_old_tracer') and self.solution_old_tracer is not None:
                 self.tracer_interp = project(self.solution_old_tracer, self.P1DG)
             else:
-                if hasattr(self.op, 'tracer_init'):
-                    self.tracer_interp = project(self.op.tracer_init, self.P1DG)
-                    self.solution_old_tracer = project(self.op.tracer_init, self.P1DG)                    
-                else:
-                    self.tracer_interp = project(sed_mod.equiltracer, self.P1DG)
-                    self.solution_old_tracer = project(sed_mod.equiltracer, self.P1DG)
+                self.tracer_interp = project(self.op.tracer_init, self.P1DG)
+                self.solution_old_tracer = project(self.op.tracer_init, self.P1DG)
 
-        options.update(sed_mod.options)
+            self.uv_d, self.eta_d = self.solution.split()    
+
+        options = self.solver_obj.options
+
+        self.solver_obj.sediment_model = op.sed_mod
+        
+        options.update(self.solver_obj.sediment_model.options)
         
         options.use_nonlinear_equations = self.nonlinear
         options.check_volume_conservation_2d = True
@@ -217,7 +204,7 @@ class UnsteadyShallowWaterProblem(UnsteadyProblem):
         options.horizontal_viscosity = self.fields['viscosity']
         options.horizontal_diffusivity = self.fields['diffusivity']
         if op.friction == 'nikuradse':
-            options.nikuradse_bed_roughness = sed_mod.ksp
+            options.nikuradse_bed_roughness = op.sed_mod.ksp
         elif op.friction == 'manning':
             options.manning_drag_coefficient = self.fields['manning_drag_coefficient']
         options.coriolis_frequency = self.fields['coriolis']
@@ -230,21 +217,24 @@ class UnsteadyShallowWaterProblem(UnsteadyProblem):
         options.use_automatic_sipg_parameter = op.sipg_parameter is None
         options.use_wetting_and_drying = op.wetting_and_drying
         options.wetting_and_drying_alpha = op.wetting_and_drying_alpha
+
         if hasattr(op, 'norm_smoother_constant'):
             options.norm_smoother = op.norm_smoother_constant      
 
         if op.suspended:
             if op.depth_integrated and op.conservative:
-                options.tracer_depth_integ_source = sed_mod.ero
-                options.tracer_depth_integ_sink = sed_mod.depo_term
+                options.tracer_depth_integ_source = op.sed_mod.ero
+                options.tracer_depth_integ_sink = op.sed_mod.depo_term
             else:
-                options.tracer_source_2d = sed_mod.ero_term
-                options.tracer_sink_2d = sed_mod.depo_term
+                options.tracer_source_2d = op.sed_mod.ero_term
+                options.tracer_sink_2d = op.sed_mod.depo_term
+
+        options.solve_exner = True
         # Boundary conditions
         self.solver_obj.bnd_functions['shallow_water'] = op.set_boundary_conditions(self.V)
 
         if op.suspended:
-            self.solver_obj.bnd_functions['sediment'] = op.set_boundary_conditions_tracer(sed_mod)
+            self.solver_obj.bnd_functions['sediment'] = op.set_boundary_conditions_tracer(op.sed_mod)
 
             for i in self.solver_obj.bnd_functions['sediment'].keys():
                 if i in self.solver_obj.bnd_functions['shallow_water'].keys():
@@ -254,8 +244,8 @@ class UnsteadyShallowWaterProblem(UnsteadyProblem):
                     self.solver_obj.bnd_functions['sediment'].update({i:self.solver_obj.bnd_functions['shallow_water'][i]})        
 
         if op.suspended:
-            #if self.op.tracer_init is not None:
-            self.solver_obj.assign_initial_conditions(uv=u_interp, elev=eta_interp, tracer=self.tracer_interp)
+            if self.op.tracer_init is not None:
+                self.solver_obj.assign_initial_conditions(uv=u_interp, elev=eta_interp, sediment=self.tracer_interp)
         else:
             self.solver_obj.assign_initial_conditions(uv=u_interp, elev=eta_interp)
 

@@ -12,9 +12,8 @@ from adapt_utils.adapt import recovery
 from adapt_utils.norms import local_frobenius_norm
 
 nx = 0.75
-#print('changed mon')
+print('changed mon')
 alpha_star = 20
-ex = 20
 
 ts = time.time()
 st = datetime.datetime.fromtimestamp(ts).strftime('%Y-%m-%d %H:%M:%S')
@@ -104,8 +103,7 @@ print(sum([(df['bath'][i] - df_real['bath'][i])**2 for i in range(len(df_real))]
 
 print("total time: ")
 print(t2-t1)
-print(ex)
-print('not changed')
+
 f = open("adapt_output/output_abs_norm_" + str(nx) + '_' + str(alpha_star) + '.txt', "w+")
 f.write(str(sum([(df['bath'][i] - df_real['bath'][i])**2 for i in range(len(df_real))])))
 f.write("\n")

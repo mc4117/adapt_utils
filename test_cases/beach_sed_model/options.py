@@ -1,5 +1,7 @@
 from thetis import *
 from thetis.configuration import *
+from thetis.options import ModelOptions2d
+from thetis.sediments import SedimentModel
 
 from adapt_utils.swe.morphological.morphological_options import MorphOptions
 
@@ -32,7 +34,7 @@ class BeachOptions(MorphOptions):
             assert friction in ('nikuradse', 'manning')
         except AssertionError:
             raise ValueError("Friction parametrisation '{:s}' not recognised.".format(friction))
-        self.friction = friction     
+        self.friction = friction  
         
         self.lx = 220
         self.ly = 10
@@ -75,7 +77,7 @@ class BeachOptions(MorphOptions):
         self.morfac = Constant(50)
 
         if mesh is None:
-            self.set_up_morph_model()
+            self.set_up_morph_model(self.default_mesh)
         else:
             self.set_up_morph_model(mesh)
 
@@ -132,12 +134,12 @@ class BeachOptions(MorphOptions):
         self.wetting_and_drying = True
         self.depth_integrated = True
         self.conservative = True
-        self.implicit_source = True
-        self.solve_tracer = True 
         self.slope_eff = True
         self.angle_correction = False
         self.convective_vel_flag = True
-        self.solve_tracer = True        
+        self.solve_tracer = True 
+
+        self.suspended = True        
         
         self.wetting_and_drying_alpha = Constant(8/25)
         self.norm_smoother_constant = Constant(8/25)
@@ -150,8 +152,14 @@ class BeachOptions(MorphOptions):
 
         self.eta_d = Function(self.P1DG).project(self.elev_init)
         
-        
-        
+        if not hasattr(self, 'bathymetry') or self.bathymetry is None:
+            self.bathymetry = self.set_bathymetry(self.P1)
+
+        self.sed_mod = SedimentModel(ModelOptions2d(), suspendedload=self.suspended, convectivevel=self.convective_vel_flag,
+                            bedload=self.bedload, angle_correction=self.angle_correction, slope_eff=self.slope_eff, seccurrent=False,
+                            mesh2d=mesh, bathymetry_2d=self.bathymetry,
+                            uv_init = self.uv_d, elev_init = self.eta_d, ks=self.ks, average_size=self.average_size, 
+                            cons_tracer = self.conservative, wetting_and_drying = self.wetting_and_drying, wetting_alpha = self.wetting_and_drying_alpha)
 
 
     def set_manning_drag_coefficient(self, fs):
