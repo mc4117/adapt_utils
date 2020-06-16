@@ -13,6 +13,7 @@ class SteadyShallowWaterProblem(SteadyProblem):
     General solver object for stationary shallow water problems.
     """
     def __init__(self, op, mesh=None, **kwargs):
+
         p = op.degree
         if op.family == 'dg-dg' and p >= 0:
             fe = VectorElement("DG", triangle, p)*FiniteElement("DG", triangle, p)

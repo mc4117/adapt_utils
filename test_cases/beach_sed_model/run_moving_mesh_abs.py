@@ -6,8 +6,8 @@ import numpy as np
 import time
 import datetime
 
-from adapt_utils.test_cases.beach.options import BeachOptions
-from adapt_utils.swe.solver import UnsteadyShallowWaterProblem
+from adapt_utils.test_cases.beach_sed_model.options import BeachOptions
+from adapt_utils.swe.morphological.solver import UnsteadyShallowWaterProblem
 from adapt_utils.adapt import recovery
 from adapt_utils.norms import local_frobenius_norm
 

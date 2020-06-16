@@ -23,8 +23,11 @@ class MorphOptions(ShallowWaterOptions):
         self.bedload = True
         self.implicit_source = False
         self.fixed_tracer = None
+        self.solve_tracer = True
+
         super(MorphOptions, self).__init__(**kwargs)
 
+    """
     def set_tracer_init(self, fs):
         if self.fixed_tracer is not None:
             return self.fixed_tracer
@@ -35,6 +38,7 @@ class MorphOptions(ShallowWaterOptions):
                 divisor = interpolate(self.ceq/self.coeff, self.ceq.function_space())
                 tracer_init = project(divisor, fs)
             return tracer_init
+    """
 
     def set_up_suspended(self, mesh, tracer=None):
         P1 = FunctionSpace(mesh, "CG", 1)

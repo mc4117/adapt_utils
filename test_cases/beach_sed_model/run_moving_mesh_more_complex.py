@@ -6,14 +6,14 @@ import numpy as np
 import time
 import datetime
 
-from adapt_utils.test_cases.beach.options import BeachOptions
-from adapt_utils.swe.solver import UnsteadyShallowWaterProblem
+from adapt_utils.test_cases.beach_sed_model.options import BeachOptions
+from adapt_utils.swe.morphological.solver import UnsteadyShallowWaterProblem
 from adapt_utils.adapt import recovery
 from adapt_utils.norms import local_frobenius_norm
 
 nx = 0.75
-print('changed mon')
-alpha_star = 20
+
+alpha_star = 55.0
 
 ts = time.time()
 st = datetime.datetime.fromtimestamp(ts).strftime('%Y-%m-%d %H:%M:%S')
@@ -59,14 +59,20 @@ def wet_dry_interface_monitor(mesh, alpha=alpha_star, beta=1.0):
     
     abs_horizontal_velocity = interpolate(abs(horizontal_velocity), P1_current)
 
+
+    uv_gradient = recovery.construct_gradient(horizontal_velocity)
+    div_uv = interpolate(sqrt(inner(uv_gradient, uv_gradient)), P1_current)
+    div_uv_star = interpolate(conditional(div_uv/(beta*max(div_uv.dat.data[:])) < Constant(1), 
+                                          div_uv/(beta*max(div_uv.dat.data[:])) , Constant(1)), P1_current)
+    
     abs_uv_star = interpolate(conditional(abs_horizontal_velocity/(beta*max(abs_horizontal_velocity.dat.data[:])) < Constant(1), 
                                      abs_horizontal_velocity/(beta*max(abs_horizontal_velocity.dat.data[:])) , Constant(1)), P1_current)
     
-    comp = interpolate(abs_uv_star**2, P1_current)      
+    comp = interpolate(conditional(abs_uv_star > div_uv_star, abs_uv_star, div_uv_star)**2, P1_current)      
     comp_new = project(comp, P1)
     comp_new2 = interpolate(conditional(comp_new > Constant(0.0), comp_new, Constant(0.0)), P1)
-    mon_init = project(sqrt(Constant(1.0) + alpha * comp_new2), P1)
-
+    mon_init = project(sqrt(1.0 + alpha * comp_new2), P1)
+    
     H = Function(P1)
     tau = TestFunction(P1)
     
@@ -104,7 +110,7 @@ print(sum([(df['bath'][i] - df_real['bath'][i])**2 for i in range(len(df_real))]
 print("total time: ")
 print(t2-t1)
 
-f = open("adapt_output/output_abs_norm_" + str(nx) + '_' + str(alpha_star) + '.txt', "w+")
+f = open("adapt_output/output_both_norm_" + str(nx) + '_' + str(alpha_star) + '.txt', "w+")
 f.write(str(sum([(df['bath'][i] - df_real['bath'][i])**2 for i in range(len(df_real))])))
 f.write("\n")
 f.write(str(t2-t1))

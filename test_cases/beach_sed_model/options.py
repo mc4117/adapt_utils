@@ -1,7 +1,9 @@
 from thetis import *
 from thetis.configuration import *
+from thetis.options import ModelOptions2d
+from thetis.sediments import SedimentModel
 
-from adapt_utils.swe.morphological_options import MorphOptions
+from adapt_utils.swe.morphological.morphological_options import MorphOptions
 
 import os
 import time
@@ -32,7 +34,7 @@ class BeachOptions(MorphOptions):
             assert friction in ('nikuradse', 'manning')
         except AssertionError:
             raise ValueError("Friction parametrisation '{:s}' not recognised.".format(friction))
-        self.friction = friction     
+        self.friction = friction  
         
         self.lx = 220
         self.ly = 10
@@ -72,12 +74,10 @@ class BeachOptions(MorphOptions):
         # Stabilisation
         self.stabilisation = 'lax_friedrichs'
         
-        self.morfac = 50
-
-        self.tracer_init = Constant(0.0)
+        self.morfac = Constant(50)
 
         if mesh is None:
-            self.set_up_morph_model()
+            self.set_up_morph_model(self.default_mesh)
         else:
             self.set_up_morph_model(mesh)
 
@@ -87,14 +87,15 @@ class BeachOptions(MorphOptions):
         omega = 0.5  # Ocean boundary forcing frequency
         self.ocean_elev_func = lambda t: (h_amp * np.cos(-omega *(t+(100.0))))
         self.ocean_vel_func = lambda t: (v_amp * np.cos(-omega *(t+(100.0))))
-           
+        
+        self.tracer_init = Constant(0.0)        
 
         # Time integration
 
         self.dt = 0.05
-        self.end_time = self.num_hours*3600.0/self.morfac
-        self.dt_per_export = 40 #export
-        self.dt_per_remesh = 40 #export
+        self.end_time = float(self.num_hours*3600.0/self.morfac)
+        self.dt_per_export = 40
+        self.dt_per_remesh = 40
         self.timestepper = 'CrankNicolson'
         self.implicitness_theta = 1.0       
         
@@ -133,11 +134,12 @@ class BeachOptions(MorphOptions):
         self.wetting_and_drying = True
         self.depth_integrated = True
         self.conservative = True
-        self.implicit_source = True
-        self.solve_tracer = True 
         self.slope_eff = True
         self.angle_correction = False
         self.convective_vel_flag = True
+        self.solve_tracer = True 
+
+        self.suspended = True        
         
         self.wetting_and_drying_alpha = Constant(8/25)
         self.norm_smoother_constant = Constant(8/25)
@@ -150,30 +152,15 @@ class BeachOptions(MorphOptions):
 
         self.eta_d = Function(self.P1DG).project(self.elev_init)
         
-        if mesh is None:
-            self.set_up_suspended(self.default_mesh, tracer = self.tracer_init)
-            self.set_up_bedload(self.default_mesh)
-        else:
-            self.set_up_suspended(mesh, tracer = self.tracer_init)
-            self.set_up_bedload(mesh)
-        
-    def set_source_tracer(self, fs, solver_obj=None, init=False):
-        if init:
-            self.depo = Function(fs).interpolate(self.settling_velocity * self.coeff)
-            self.ero = Function(fs).interpolate(self.settling_velocity * self.ceq)
-        else:
-            self.depo.interpolate(self.settling_velocity * self.coeff)
-            self.ero.interpolate(self.settling_velocity * self.ceq)
-        return self.depo, self.ero
+        if not hasattr(self, 'bathymetry') or self.bathymetry is None:
+            self.bathymetry = self.set_bathymetry(self.P1)
 
-    def get_cfactor(self):
-        try:
-            assert hasattr(self, 'depth')
-        except AssertionError:
-            raise ValueError("Depth is undefined.")
-        self.ksp = Constant(3*self.average_size)
-        hclip = conditional(self.ksp > self.depth, self.ksp, self.depth)
-        return Function(self.P1DG).interpolate(conditional(self.depth > self.ksp, 2*((2.5*ln(11.036*hclip/self.ksp))**(-2)), Constant(0.0)))
+        self.sed_mod = SedimentModel(ModelOptions2d(), suspendedload=self.suspended, convectivevel=self.convective_vel_flag,
+                            bedload=self.bedload, angle_correction=self.angle_correction, slope_eff=self.slope_eff, seccurrent=False,
+                            mesh2d=mesh, bathymetry_2d=self.bathymetry,
+                            uv_init = self.uv_d, elev_init = self.eta_d, ks=self.ks, average_size=self.average_size, 
+                            cons_tracer = self.conservative, wetting_and_drying = self.wetting_and_drying, wetting_alpha = self.wetting_and_drying_alpha)
+
 
     def set_manning_drag_coefficient(self, fs):
         if self.friction == 'manning':
@@ -239,21 +226,6 @@ class BeachOptions(MorphOptions):
         def update_forcings(t):
 
             self.update_boundary_conditions(solver_obj, t=t)
-          
-            self.update_key_hydro(solver_obj)
-
-            if self.t_old.dat.data[:] == t:
-                if self.suspended:
-                    self.update_suspended(solver_obj)
-                if self.bedload:
-                    self.update_bedload(solver_obj)
-
-                solve(self.f == 0, self.z_n1)
-
-                self.bathymetry.assign(self.z_n1)
-                solver_obj.fields.bathymetry_2d.assign(self.z_n1)
-            
-            self.t_old.assign(t)
 
         return update_forcings
 

@@ -826,6 +826,7 @@ class SteadyProblem():
 
             tmp.project_fields(self)
             tmp.project_solution(self.solution)
+
             if self.op.solve_tracer:
                 tmp.project_bathymetry(self.solution_old_bathymetry)
                 tmp.project_tracer(self.solution_old_tracer)
@@ -1081,9 +1082,13 @@ class UnsteadyProblem(SteadyProblem):
         self.adjoint_solution_old = Function(self.V, name='Old adjoint solution')
 
     def set_start_condition(self, adjoint=False):
+
         self.set_solution(self.op.set_start_condition(self.V, adjoint=adjoint), adjoint)
         if self.op.solve_tracer:
-            self.solution_old_tracer = Function(self.P1DG).project(self.op.set_tracer_init(self.P1DG))
+            if hasattr(self.op, 'tracer_init'):
+                self.solution_old_tracer = Function(self.P1DG).project(self.op.tracer_init)
+            else:
+                self.solution_old_tracer = Function(self.P1DG).project(Constant(0.0))
             self.solution_old_bathymetry = Function(self.P1).project(self.op.set_bathymetry(self.P1))
         if adjoint:
             self.adjoint_solution_old.assign(self.adjoint_solution)
@@ -1151,7 +1156,7 @@ class UnsteadyProblem(SteadyProblem):
                         self.project_tracer(tracer, adjoint=adjoint)
                 else:
                     self.project_solution(solution_old, adjoint=adjoint)
-                    if op.solv_tracer:
+                    if op.solve_tracer:
                         self.project_bathymetry(bathymetry, adjoint=adjoint)
                         self.project_tracer(tracer, adjoint=adjoint)
 
