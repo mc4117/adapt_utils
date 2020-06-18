@@ -218,7 +218,9 @@ class BeachOptions(MorphOptions):
         return self.initial_value
 
     def set_boundary_conditions_tracer(self, fs):
+        inflow_tag = 1
         boundary_conditions = {}
+        boundary_conditions[inflow_tag] = {'value': self.sed_mod.equiltracer}
         return boundary_conditions
 
     def get_update_forcings(self, solver_obj):
