@@ -11,8 +11,7 @@ from adapt_utils.swe.morphological.solver import UnsteadyShallowWaterProblem
 from adapt_utils.adapt import recovery
 from adapt_utils.norms import local_frobenius_norm
 
-nx = 0.75
-print('changed mon')
+nx = 0.25
 alpha_star = 20
 
 ts = time.time()
@@ -28,7 +27,7 @@ op = BeachOptions(approach='monge_ampere',
                    friction='manning',
                    nx=nx,
                    ny=1,
-                   input_dir = 'hydrodynamics_beach_l_sep_nx_165.0',
+                   input_dir = 'hydrodynamics_beach_l_sep_nx_55.0',
                    output_dir = outputdir,
                    r_adapt_rtol=1.0e-3,
                    init = True)
@@ -93,19 +92,23 @@ baththetis1 = []
 for i in np.linspace(0, 219, 220):
     xaxisthetis1.append(i)
     baththetis1.append(-bath.at([i, 5]))
-    
+
 df = pd.concat([pd.DataFrame(xaxisthetis1, columns = ['x']), pd.DataFrame(baththetis1, columns = ['bath'])], axis = 1)
 
-df_real = pd.read_csv('final_result_nx2.csv')
+df_real = pd.read_csv('final_result_nx4.0.csv')
 
 print(alpha_star)
 print(sum([(df['bath'][i] - df_real['bath'][i])**2 for i in range(len(df_real))]))
+
+print(sum([(df['bath'][i] - df_real['bath'][i])**2 for i in range(1, len(df_real))]))
 
 print("total time: ")
 print(t2-t1)
 
 f = open("adapt_output/output_abs_norm_" + str(nx) + '_' + str(alpha_star) + '.txt', "w+")
 f.write(str(sum([(df['bath'][i] - df_real['bath'][i])**2 for i in range(len(df_real))])))
+f.write("\n")
+f.write(str(sum([(df['bath'][i] - df_real['bath'][i])**2 for i in range(1, len(df_real))])))
 f.write("\n")
 f.write(str(t2-t1))
 f.close()
