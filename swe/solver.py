@@ -637,7 +637,8 @@ class UnsteadyShallowWaterProblem(UnsteadyProblem):
         options.solve_tracer = op.solve_tracer            
         if op.solve_tracer:
             options.use_tracer_conservative_form = op.conservative
-            options.tracer_advective_velocity_factor = self.op.corrective_velocity_factor
+            if op.convective_vel_flag:
+                options.tracer_advective_velocity_factor = self.op.corrective_velocity_factor
             if op.depth_integrated and op.conservative:
                 options.tracer_depth_integ_source = self.op.depth_int_source
                 options.tracer_depth_integ_sink = self.op.depth_int_sink
@@ -662,7 +663,6 @@ class UnsteadyShallowWaterProblem(UnsteadyProblem):
                 self.solver_obj.assign_initial_conditions(uv=u_interp, elev=eta_interp, tracer=self.tracer_interp)
         else:
             self.solver_obj.assign_initial_conditions(uv=u_interp, elev=eta_interp)
-
         if hasattr(self, 'extra_setup'):
             self.extra_setup()
 

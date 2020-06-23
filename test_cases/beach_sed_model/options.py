@@ -68,13 +68,13 @@ class BeachOptions(MorphOptions):
         if self.export_intermediate:
             self.bathymetry_file = File(self.di + "/bathy.pvd")
 
-        self.num_hours = 6
+        self.num_hours = 3
 
         self.t_old = Constant(0.0)
         # Stabilisation
         self.stabilisation = 'lax_friedrichs'
         
-        self.morfac = Constant(50)
+        self.morfac = Constant(25)
 
         if mesh is None:
             self.set_up_morph_model(self.default_mesh)
@@ -94,8 +94,8 @@ class BeachOptions(MorphOptions):
 
         self.dt = 0.05
         self.end_time = float(self.num_hours*3600.0/self.morfac)
-        self.dt_per_export = 40
-        self.dt_per_remesh = 40
+        self.dt_per_export = 80
+        self.dt_per_remesh = 80
         self.timestepper = 'CrankNicolson'
         self.implicitness_theta = 1.0       
         
@@ -119,11 +119,12 @@ class BeachOptions(MorphOptions):
         # Outputs
         if self.export_intermediate:
             self.bath_file = File(os.path.join(self.di, 'bath_export.pvd'))
-            self.eta_tilde_file = File(os.path.join(self.di, 'eta_tilde.pvd'))
+            self.diff_bath_file = File(os.path.join(self.di, 'diff_export.pvd'))
+            #self.eta_tilde_file = File(os.path.join(self.di, 'eta_tilde.pvd'))
         self.eta_tilde = Function(self.P1DG, name='Modified elevation')        
 
         # Physical
-        self.base_viscosity = 2*10**(-1)
+        self.base_viscosity = 1 #0.2 #5*10**(-1)
         self.base_diffusivity = 0.15
         self.gravity = Constant(9.81)
         self.porosity = Constant(0.4)
@@ -139,10 +140,11 @@ class BeachOptions(MorphOptions):
         self.convective_vel_flag = True
         self.solve_tracer = True 
 
-        self.suspended = True        
-        
-        self.wetting_and_drying_alpha = Constant(8/25)
-        self.norm_smoother_constant = Constant(8/25)
+        self.suspended = True
+        self.bedload = True
+
+        self.wetting_and_drying_alpha = Constant(1/25)
+        self.norm_smoother_constant = Constant(10/25)
 
         # Initial
 
@@ -154,6 +156,8 @@ class BeachOptions(MorphOptions):
         
         if not hasattr(self, 'bathymetry') or self.bathymetry is None:
             self.bathymetry = self.set_bathymetry(self.P1)
+            self.bath_init = self.set_bathymetry(self.P1)
+            self.diff_bathy = Function(self.P1)
 
         self.sed_mod = SedimentModel(ModelOptions2d(), suspendedload=self.suspended, convectivevel=self.convective_vel_flag,
                             bedload=self.bedload, angle_correction=self.angle_correction, slope_eff=self.slope_eff, seccurrent=False,
@@ -220,7 +224,7 @@ class BeachOptions(MorphOptions):
     def set_boundary_conditions_tracer(self, fs):
         inflow_tag = 1
         boundary_conditions = {}
-        boundary_conditions[inflow_tag] = {'value': self.sed_mod.equiltracer}
+        #boundary_conditions[inflow_tag] = {'value': self.sed_mod.equiltracer}
         return boundary_conditions
 
     def get_update_forcings(self, solver_obj):
@@ -273,8 +277,10 @@ class BeachOptions(MorphOptions):
 
         def export_func():
             self.eta_tilde.project(eta + bathymetry_displacement(eta))
-            self.eta_tilde_file.write(self.eta_tilde) 
+            #self.eta_tilde_file.write(self.eta_tilde)
             self.bath_file.write(self.bath_export)
+            self.diff_bathy.project(self.bath_export - self.bath_init)
+            self.diff_bath_file.write(self.diff_bathy)
         return export_func 
 
     def set_boundary_surface(self):

@@ -541,6 +541,7 @@ def morphological(boundary_conditions_fn, morfac, morfac_transport, suspendedloa
     # calculate critical shields parameter thetacr
     R = th.Constant(rhos/1000 - 1)
     dstar = th.Constant(average_size*((g*R)/(viscosity**2))**(1/3))
+
     if max(dstar.dat.data[:] < 1):
         print('ERROR: dstar value less than 1')
     elif max(dstar.dat.data[:] < 4):

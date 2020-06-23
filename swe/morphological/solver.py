@@ -251,7 +251,6 @@ class UnsteadyShallowWaterProblem(UnsteadyProblem):
 
         if hasattr(self, 'extra_setup'):
             self.extra_setup()
-
         # Ensure correct iteration count
         self.solver_obj.i_export = self.remesh_step
         self.solver_obj.next_export_t = self.remesh_step*op.dt*op.dt_per_remesh

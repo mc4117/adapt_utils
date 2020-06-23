@@ -13,7 +13,7 @@ t1 = time.time()
 
 t1 = time.time()
 
-nx = 4.0
+nx = 1.0
 
 ts = time.time()
 st = datetime.datetime.fromtimestamp(ts).strftime('%Y-%m-%d %H:%M:%S')
@@ -27,12 +27,11 @@ op = BeachOptions(approach='fixed_mesh',
                    num_adapt=1,
                    friction='manning',
                    nx=nx,
-                   ny=2,
-                   input_dir = 'hydrodynamics_beach_l_sep_nx_880',
+                   ny=1,
+                   input_dir = 'hydrodynamics_beach_l_sep_nx_small220', #'hydrodynamics_beach_l_sep_nx_220',
                    output_dir = outputdir,
                    r_adapt_rtol=1.0e-3,
                    init = True)
-
 
 swp = UnsteadyShallowWaterProblem(op, levels=0)
 swp.setup_solver()
@@ -52,4 +51,4 @@ for i in np.linspace(0, 219, 220):
     xaxisthetis1.append(i)
     baththetis1.append(-swp.solver_obj.fields.bathymetry_2d.at([i, 5]))
 df = pd.concat([pd.DataFrame(xaxisthetis1, columns = ['x']), pd.DataFrame(baththetis1, columns = ['bath'])], axis = 1)
-df.to_csv("final_result_nx" + str(nx) + ".csv", index = False)
+#df.to_csv("final_result_nx" + str(nx) + ".csv", index = False)
