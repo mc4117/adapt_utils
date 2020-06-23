@@ -256,7 +256,7 @@ class MorphOptions(ShallowWaterOptions):
 
         if self.friction == 'nikuradse':
             self.quadratic_drag_coefficient.interpolate(self.get_cfactor())
-            
+
         self.cfactor.interpolate(self.get_cfactor())
 
         # mu - ratio between skin friction and normal friction

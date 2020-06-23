@@ -60,7 +60,7 @@ def boundary_conditions_fn_balzano(bathymetry_2d, flag = None, morfac = 1, t_new
 # define mesh
 lx = 220
 ly = 10
-nx = np.int(lx*2.0)
+nx = np.int(lx*1.0)
 ny = 10
 mesh2d = th.RectangleMesh(nx, ny, lx, ly)
 
@@ -84,11 +84,11 @@ elev_init = th.Function(P1_2d).interpolate(th.Constant(0.0))
 
 uv_init = th.Constant((10**(-7), 0.))
 
-value = 8/25
+value = 1/25
 
 sponge_fn = th.Function(V).interpolate(th.conditional(x>=100, -99 + x, th.Constant(1.0)))
 
-solver_obj, update_forcings_hydrodynamics, outputdir = morph.hydrodynamics_only(boundary_conditions_fn_balzano, mesh2d, bathymetry_2d, uv_init, elev_init, wetting_and_drying = True, wetting_alpha = value, fluc_bcs = True, average_size = 200 * (10**(-6)), dt=0.05, t_end=100, friction = 'manning', sponge_viscosity = sponge_fn, viscosity = 2*10**(-1))
+solver_obj, update_forcings_hydrodynamics, outputdir = morph.hydrodynamics_only(boundary_conditions_fn_balzano, mesh2d, bathymetry_2d, uv_init, elev_init, wetting_and_drying = True, wetting_alpha = value, fluc_bcs = True, average_size = 200 * (10**(-6)), dt=0.05, t_end=100, friction = 'manning', sponge_viscosity = sponge_fn, viscosity = 1)
 
 # run model
 
@@ -97,7 +97,7 @@ solver_obj.iterate(update_forcings = update_forcings_hydrodynamics)
 uv, elev = solver_obj.fields.solution_2d.split()
 
 if plot == False:
-    morph.export_final_state("hydrodynamics_beach_l_sep_nx_"+str(nx), uv, elev)
+    morph.export_final_state("hydrodynamics_beach_l_sep_nx_small"+str(nx), uv, elev)
 else:
     import pylab as plt
 

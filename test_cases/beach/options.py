@@ -65,6 +65,9 @@ class BeachOptions(MorphOptions):
 
         if self.export_intermediate:
             self.bathymetry_file = File(self.di + "/bathy.pvd")
+            self.diff_bath_file = File(os.path.join(self.di, 'diff_export.pvd'))
+            self.bath_init = self.set_bathymetry(self.P1)
+            self.diff_bathy = Function(self.P1)
 
         self.num_hours = 6
 
@@ -119,11 +122,12 @@ class BeachOptions(MorphOptions):
         if self.export_intermediate:
             self.bath_file = File(os.path.join(self.di, 'bath_export.pvd'))
             self.eta_tilde_file = File(os.path.join(self.di, 'eta_tilde.pvd'))
+            self.diff_bath_file = File(os.path.join(self.di, 'diff_export.pvd'))            
         self.eta_tilde = Function(self.P1DG, name='Modified elevation')        
 
         # Physical
-        self.base_viscosity = 2*10**(-1)
-        self.base_diffusivity = 0.15
+        self.base_viscosity = 5*10**(-1)
+        self.base_diffusivity = 1.0
         self.gravity = Constant(9.81)
         self.porosity = Constant(0.4)
         self.ks = Constant(0.025)
@@ -138,6 +142,8 @@ class BeachOptions(MorphOptions):
         self.slope_eff = True
         self.angle_correction = False
         self.convective_vel_flag = True
+        self.suspended = True
+        self.bedload = True
         
         self.wetting_and_drying_alpha = Constant(8/25)
         self.norm_smoother_constant = Constant(8/25)
@@ -152,10 +158,12 @@ class BeachOptions(MorphOptions):
         
         if mesh is None:
             self.set_up_suspended(self.default_mesh, tracer = self.tracer_init)
-            self.set_up_bedload(self.default_mesh)
+            if self.bedload:
+                self.set_up_bedload(self.default_mesh)
         else:
             self.set_up_suspended(mesh, tracer = self.tracer_init)
-            self.set_up_bedload(mesh)
+            if self.bedload:
+                self.set_up_bedload(mesh)
         
     def set_source_tracer(self, fs, solver_obj=None, init=False):
         if init:
@@ -299,8 +307,10 @@ class BeachOptions(MorphOptions):
 
         def export_func():
             self.eta_tilde.project(eta + bathymetry_displacement(eta))
-            self.eta_tilde_file.write(self.eta_tilde) 
-            self.bath_file.write(self.bath_export)
+            #self.eta_tilde_file.write(self.eta_tilde)
+            self.bathymetry_file.write(self.bath_export)
+            self.diff_bathy.project(self.bath_export - self.bath_init)
+            self.diff_bath_file.write(self.diff_bathy)
         return export_func 
 
     def set_boundary_surface(self):

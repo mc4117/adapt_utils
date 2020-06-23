@@ -76,7 +76,7 @@ def wet_dry_interface_monitor(mesh, alpha=alpha_star, beta=1.0):
     H = Function(P1)
     tau = TestFunction(P1)
     
-    K = 100*(0.4**2)/4
+    K = 1000*(0.4**2)/4
     a = (inner(tau, H)*dx)+(K*inner(tau.dx(1), H.dx(1))*dx) - inner(tau, mon_init)*dx
     solve(a == 0, H)    
 

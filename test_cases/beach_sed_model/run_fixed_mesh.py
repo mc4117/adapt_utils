@@ -11,9 +11,7 @@ from adapt_utils.swe.morphological.solver import UnsteadyShallowWaterProblem
 
 t1 = time.time()
 
-t1 = time.time()
-
-nx = 2.0
+nx = 1.0
 
 ts = time.time()
 st = datetime.datetime.fromtimestamp(ts).strftime('%Y-%m-%d %H:%M:%S')
@@ -28,11 +26,10 @@ op = BeachOptions(approach='fixed_mesh',
                    friction='manning',
                    nx=nx,
                    ny=1,
-                   input_dir = 'hydrodynamics_beach_l_sep_nx_440',
+                   input_dir = 'hydrodynamics_beach_l_sep_nx_small220', #'hydrodynamics_beach_l_sep_nx_220',
                    output_dir = outputdir,
                    r_adapt_rtol=1.0e-3,
                    init = True)
-
 
 swp = UnsteadyShallowWaterProblem(op, levels=0)
 swp.setup_solver()
