@@ -2,7 +2,7 @@ from thetis import *
 from thetis.configuration import *
 
 from adapt_utils.swe.morphological.morphological_options import MorphOptions
-from thetis.sediments_adjoint import SedimentModel
+from thetis.sediments import SedimentModel
 from thetis.options import ModelOptions2d
 
 import os
@@ -78,10 +78,10 @@ class TrenchOptions(MorphOptions):
             self.set_up_morph_model(self.input_dir, mesh)
 
         # Time integration
-        self.dt = 0.2
+        self.dt = 0.3
         self.end_time = float(self.num_hours*3600.0/self.morfac)
-        self.dt_per_export = 60
-        self.dt_per_remesh = 60
+        self.dt_per_export = 40
+        self.dt_per_remesh = 40
         self.timestepper = 'CrankNicolson'
         self.implicitness_theta = 1.0
 
@@ -99,7 +99,7 @@ class TrenchOptions(MorphOptions):
         self.xrange = np.linspace(tol, 16-tol, 20)
         self.qois = []
         
-        self.bnd_dict = {1}
+        #self.bnd_dict = {1}
 
 
         
@@ -112,10 +112,10 @@ class TrenchOptions(MorphOptions):
         # Physical
         self.base_viscosity = 1e-6        
         self.base_diffusivity = 0.18161630470135287
-        self.gravity = Constant(9.81)
+
         self.porosity = Constant(0.4)
         self.ks = Constant(0.025)
-        self.average_size = 160e-6  # Average sediment size        
+        self.average_size = 160*(10**(-6))  # Average sediment size        
 
         self.wetting_and_drying = False
         self.conservative = False
@@ -123,24 +123,23 @@ class TrenchOptions(MorphOptions):
         self.slope_eff = True
         self.angle_correction = True
         self.solve_tracer = True
+        self.suspended = True
+        self.convectivevel_flag = True
+        self.bedload = True
 
         # Initial
-        self.elev_init, self.uv_init = self.initialise_fields(input_dir, self.di)
+        self.elev_init, self.uv_init = self.initialise_fields(mesh, input_dir, self.di)
 
-        self.uv_d = Function(self.P1_vec_dg).project(self.uv_init)
+        #self.uv_d = Function(self.P1_vec_dg).project(self.uv_init)
 
-        self.eta_d = Function(self.P1DG).project(self.elev_init)
+        #self.eta_d = Function(self.P1DG).project(self.elev_init)
 
         if not hasattr(self, 'bathymetry') or self.bathymetry is None:
             self.bathymetry = self.set_bathymetry(self.P1)
 
-        self.sed_mod = SedimentModel(ModelOptions2d(), suspendedload=self.suspended, convectivevel=self.convective_vel_flag,
-                            bedload=self.bedload, angle_correction=self.angle_correction, slope_eff=self.slope_eff, seccurrent=False,
-                            mesh2d=mesh, bathymetry_2d=self.bathymetry,
-                            uv_init = self.uv_d, elev_init = self.eta_d, ks=self.ks, average_size=self.average_size, 
-                            cons_tracer = self.conservative, wetting_and_drying = self.wetting_and_drying, wetting_alpha = self.wetting_and_drying_alpha)
 
-        self.tracer_init = self.sed_mod.equiltracer
+        if self.suspended:
+            self.tracer_init = None
 
     def set_bathymetry(self, fs, **kwargs):
 
@@ -173,6 +172,8 @@ class TrenchOptions(MorphOptions):
 
     def set_boundary_conditions_tracer(self, sed_model):
         boundary_conditions = {}
+        inflow_tag = 1
+        boundary_conditions[inflow_tag] = {'value': sed_model.sediment_rate}        
         return boundary_conditions
 
     def set_initial_condition(self, fs):
@@ -190,7 +191,7 @@ class TrenchOptions(MorphOptions):
     def get_update_forcings(self, solver_obj):
         return None
 
-    def initialise_fields(self, inputdir, outputdir):
+    def initialise_fields(self, mesh2d, inputdir, outputdir):
         """
         Initialise simulation with results from a previous simulation
         """     
@@ -206,22 +207,24 @@ class TrenchOptions(MorphOptions):
             newplex.createFromFile(inputdir + '/myplex.h5')
             mesh = Mesh(newplex)
     
-        DG_2d = FunctionSpace(mesh, 'DG', 1)  
-        vector_dg = VectorFunctionSpace(mesh, 'DG', 1)          
+        DG_2d = get_functionspace(mesh2d, "DG", 1)
         # elevation
         with timed_stage('initialising elevation'):
             chk = DumbCheckpoint(inputdir + "/elevation", mode=FILE_READ)
             elev_init = Function(DG_2d, name="elevation")
             chk.load(elev_init)
+            File(outputdir + "/elevation_imported.pvd").write(elev_init)
             chk.close()
         # velocity
         with timed_stage('initialising velocity'):
-            chk = DumbCheckpoint(inputdir + "/velocity" , mode=FILE_READ)
-            uv_init = Function(vector_dg, name="velocity")
+            chk = DumbCheckpoint(inputdir + "/velocity", mode=FILE_READ)
+            V = VectorFunctionSpace(mesh2d, "DG", 1)
+            uv_init = Function(V, name="velocity")
             chk.load(uv_init)
+            File(outputdir + "/velocity_imported.pvd").write(uv_init)
             chk.close()
+        return elev_init, uv_init,
 
-        return  elev_init, uv_init, 
 
     def get_export_func(self, solver_obj):
         self.bath_export = solver_obj.fields.bathymetry_2d

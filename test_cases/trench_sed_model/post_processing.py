@@ -8,6 +8,14 @@ Created on Sun May  3 17:37:12 2020
 
 import pandas as pd
 
+df_real = pd.read_csv('fixed_output/bed_trench_output1.0.csv')
+df_real1 = pd.read_csv('fixed_output/bed_trench_output0.8.csv')
+df_real2 = pd.read_csv('fixed_output/bed_trench_output0.6.csv')
+df_real3 = pd.read_csv('fixed_output/bed_trench_output0.4.csv')
+df_real4 = pd.read_csv('fixed_output/bed_trench_output0.2.csv')
+
+stop
+
 df_real = pd.read_csv('fixed_output/bed_trench_output2.0.csv')
 df_test1 = pd.read_csv('adapt_output2/bed_trench_output_0.2_0.0.csv')
 df_test2 = pd.read_csv('adapt_output2/bed_trench_output_0.2_10.0.csv')
