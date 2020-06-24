@@ -197,7 +197,6 @@ class UnsteadyShallowWaterProblem(UnsteadyProblem):
         else:
             options.fields_to_export = ['uv_2d', 'elev_2d'] if op.plot_pvd else []
             options.fields_to_export_hdf5 = ['uv_2d', 'elev_2d'] if op.save_hdf5 else []
-
         # Parameters
         options.use_grad_div_viscosity_term = op.grad_div_viscosity
         options.element_family = op.family
