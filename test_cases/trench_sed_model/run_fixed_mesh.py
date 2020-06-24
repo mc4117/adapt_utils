@@ -52,7 +52,6 @@ datathetis = []
 bathymetrythetis1 = []
 diff_thetis = []
 for i in range(len(data[0].dropna())):
-    print(i)
     datathetis.append(data[0].dropna()[i])
     bathymetrythetis1.append(-bath.at([np.round(data[0].dropna()[i], 3), 0.55]))
     diff_thetis.append((data[1].dropna()[i] - bathymetrythetis1[-1])**2)

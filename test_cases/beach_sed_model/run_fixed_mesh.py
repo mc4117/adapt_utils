@@ -26,11 +26,7 @@ op = BeachOptions(approach='fixed_mesh',
                    friction='manning',
                    nx=nx,
                    ny=1,
-<<<<<<< HEAD
-                   input_dir = 'hydrodynamics_beach_l_sep_nx_small55', #'hydrodynamics_beach_l_sep_nx_220',
-=======
                    input_dir = 'hydrodynamics_beach_l_sep_nx_small55',
->>>>>>> 5a7d888469965c50f129e823c4d95f62da884228
                    output_dir = outputdir,
                    r_adapt_rtol=1.0e-3,
                    init = True)

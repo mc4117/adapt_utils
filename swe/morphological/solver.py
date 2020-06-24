@@ -1,6 +1,6 @@
 from thetis import *
 from thetis.physical_constants import *
-from thetis.sediments import SedimentModel
+from thetis.sediments_adjoint import SedimentModel
 
 from adapt_utils.solver import UnsteadyProblem
 from adapt_utils.adapt.metric import *
