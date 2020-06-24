@@ -11,9 +11,9 @@ from adapt_utils.swe.morphological.solver import UnsteadyShallowWaterProblem
 from adapt_utils.adapt import recovery
 from adapt_utils.norms import local_frobenius_norm
 
-nx = 0.25
+nx = 0.5
 
-alpha_star = 75.0
+alpha_star = 200.0
 
 ts = time.time()
 st = datetime.datetime.fromtimestamp(ts).strftime('%Y-%m-%d %H:%M:%S')
@@ -28,7 +28,7 @@ op = BeachOptions(approach='monge_ampere',
                    friction='manning',
                    nx=nx,
                    ny=1,
-                   input_dir = 'hydrodynamics_beach_l_sep_nx_55.0',
+                   input_dir = 'hydrodynamics_beach_l_sep_nx_110.0',
                    output_dir = outputdir,
                    r_adapt_rtol=1.0e-3,
                    init = True)

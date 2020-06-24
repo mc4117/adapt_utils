@@ -12,7 +12,7 @@ from adapt_utils.adapt import recovery
 from adapt_utils.norms import local_frobenius_norm
 
 nx = 0.25
-alpha_star = 20
+alpha_star = 200
 
 ts = time.time()
 st = datetime.datetime.fromtimestamp(ts).strftime('%Y-%m-%d %H:%M:%S')

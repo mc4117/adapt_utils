@@ -11,8 +11,6 @@ from adapt_utils.swe.morphological.solver import UnsteadyShallowWaterProblem
 
 t1 = time.time()
 
-t1 = time.time()
-
 nx = 1.0
 
 ts = time.time()
@@ -51,4 +49,4 @@ for i in np.linspace(0, 219, 220):
     xaxisthetis1.append(i)
     baththetis1.append(-swp.solver_obj.fields.bathymetry_2d.at([i, 5]))
 df = pd.concat([pd.DataFrame(xaxisthetis1, columns = ['x']), pd.DataFrame(baththetis1, columns = ['bath'])], axis = 1)
-#df.to_csv("final_result_nx" + str(nx) + ".csv", index = False)
+df.to_csv("final_result_nx" + str(nx) + "_ny1.csv", index = False)
