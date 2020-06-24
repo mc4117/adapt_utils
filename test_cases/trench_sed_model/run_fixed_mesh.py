@@ -10,7 +10,7 @@ from adapt_utils.swe.morphological.solver import UnsteadyShallowWaterProblem
 
 t1 = time.time()
 
-nx = 2.0
+nx = 1.0
 
 dir = 'hydrodynamics_trench_' + str(nx)
 
@@ -20,7 +20,7 @@ outputdir = 'outputs' + st
 
 op = TrenchOptions(approach='fixed_mesh',
                    input_dir = dir,
-                   output_dir = outputdir,                   
+                   output_dir = outputdir,
                    plot_timeseries=False,
                    plot_pvd=True,
                    debug=False,
@@ -59,7 +59,7 @@ for i in range(len(data[0].dropna())):
 
 df = pd.concat([pd.DataFrame(datathetis, columns=['x']), pd.DataFrame(bathymetrythetis1, columns=['bath'])], axis=1)
 
-#df.to_csv('fixed_output/bed_trench_output' + str(nx) + '.csv')
+df.to_csv('fixed_output/bed_trench_output' + str(nx) + '.csv')
 
 plt.plot(datathetis, bathymetrythetis1, '.', linewidth=2, label='fixed mesh')
 plt.legend()
