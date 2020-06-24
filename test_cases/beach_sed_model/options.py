@@ -143,7 +143,7 @@ class BeachOptions(MorphOptions):
         self.suspended = True
         self.bedload = True
 
-        self.wetting_and_drying_alpha = Constant(1/25)
+        self.wetting_and_drying_alpha = Constant(5/25)
         self.norm_smoother_constant = Constant(10/25)
 
         # Initial

@@ -60,7 +60,7 @@ def boundary_conditions_fn_balzano(bathymetry_2d, flag = None, morfac = 1, t_new
 # define mesh
 lx = 220
 ly = 10
-nx = np.int(lx*1.0)
+nx = np.int(lx*0.25)
 ny = 10
 mesh2d = th.RectangleMesh(nx, ny, lx, ly)
 
@@ -84,7 +84,7 @@ elev_init = th.Function(P1_2d).interpolate(th.Constant(0.0))
 
 uv_init = th.Constant((10**(-7), 0.))
 
-value = 1/25
+value = 5/25
 
 sponge_fn = th.Function(V).interpolate(th.conditional(x>=100, -99 + x, th.Constant(1.0)))
 
