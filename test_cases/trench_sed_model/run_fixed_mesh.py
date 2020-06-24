@@ -10,12 +10,17 @@ from adapt_utils.swe.morphological.solver import UnsteadyShallowWaterProblem
 
 t1 = time.time()
 
-nx = 1.0
+nx = 2.0
 
-dir = 'hydrodynamics_trench' #_' + str(nx)'
+dir = 'hydrodynamics_trench_' + str(nx)
+
+ts = time.time()
+st = datetime.datetime.fromtimestamp(ts).strftime('%Y-%m-%d %H:%M:%S')
+outputdir = 'outputs' + st
 
 op = TrenchOptions(approach='fixed_mesh',
                    input_dir = dir,
+                   output_dir = outputdir,                   
                    plot_timeseries=False,
                    plot_pvd=True,
                    debug=False,

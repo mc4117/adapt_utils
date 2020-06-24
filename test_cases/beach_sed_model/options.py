@@ -88,7 +88,7 @@ class BeachOptions(MorphOptions):
         self.ocean_elev_func = lambda t: (h_amp * np.cos(-omega *(t+(100.0))))
         self.ocean_vel_func = lambda t: (v_amp * np.cos(-omega *(t+(100.0))))
         
-        self.tracer_init = Constant(0.0)        
+        self.tracer_init = Constant(0.0)    
 
         # Time integration
 

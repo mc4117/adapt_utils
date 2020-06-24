@@ -2,7 +2,8 @@ from thetis import *
 from thetis.configuration import *
 
 from adapt_utils.swe.morphological.morphological_options import MorphOptions
-from thetis.sediments import SedimentModel
+from thetis.sediments_adjoint import SedimentModel
+from thetis.options import ModelOptions2d
 
 import os
 import time
@@ -62,8 +63,6 @@ class TrenchOptions(MorphOptions):
 
         self.grad_depth_viscosity = True
 
-        self.bathymetry_file = File(self.di + "/bathy.pvd")
-
         self.num_hours = 15
 
         self.t_old = Constant(0.0)
@@ -79,7 +78,7 @@ class TrenchOptions(MorphOptions):
             self.set_up_morph_model(self.input_dir, mesh)
 
         # Time integration
-        self.dt = 0.3
+        self.dt = 0.2
         self.end_time = float(self.num_hours*3600.0/self.morfac)
         self.dt_per_export = 60
         self.dt_per_remesh = 60
@@ -102,6 +101,7 @@ class TrenchOptions(MorphOptions):
         
         self.bnd_dict = {1}
 
+
         
     def set_up_morph_model(self, input_dir, mesh = None):
 
@@ -111,13 +111,14 @@ class TrenchOptions(MorphOptions):
 
         # Physical
         self.base_viscosity = 1e-6        
-        self.base_diffusivity = 0.15 #756753359379702
+        self.base_diffusivity = 0.18161630470135287
         self.gravity = Constant(9.81)
         self.porosity = Constant(0.4)
         self.ks = Constant(0.025)
         self.average_size = 160e-6  # Average sediment size        
 
         self.wetting_and_drying = False
+        self.conservative = False
         self.implicit_source = False
         self.slope_eff = True
         self.angle_correction = True
@@ -130,6 +131,16 @@ class TrenchOptions(MorphOptions):
 
         self.eta_d = Function(self.P1DG).project(self.elev_init)
 
+        if not hasattr(self, 'bathymetry') or self.bathymetry is None:
+            self.bathymetry = self.set_bathymetry(self.P1)
+
+        self.sed_mod = SedimentModel(ModelOptions2d(), suspendedload=self.suspended, convectivevel=self.convective_vel_flag,
+                            bedload=self.bedload, angle_correction=self.angle_correction, slope_eff=self.slope_eff, seccurrent=False,
+                            mesh2d=mesh, bathymetry_2d=self.bathymetry,
+                            uv_init = self.uv_d, elev_init = self.eta_d, ks=self.ks, average_size=self.average_size, 
+                            cons_tracer = self.conservative, wetting_and_drying = self.wetting_and_drying, wetting_alpha = self.wetting_and_drying_alpha)
+
+        self.tracer_init = self.sed_mod.equiltracer
 
     def set_bathymetry(self, fs, **kwargs):
 
