@@ -10,7 +10,7 @@ from adapt_utils.swe.morphological.solver import UnsteadyShallowWaterProblem
 
 t1 = time.time()
 
-nx = 2.0
+nx = 0.1
 
 dir = 'hydrodynamics_trench_' + str(nx)
 
@@ -51,21 +51,21 @@ data = pd.read_csv('experimental_data.csv', header=None)
 datathetis = []
 bathymetrythetis1 = []
 diff_thetis = []
-for i in range(len(data[0].dropna())):
-    datathetis.append(data[0].dropna()[i])
-    bathymetrythetis1.append(-bath.at([np.round(data[0].dropna()[i], 3), 0.55]))
-    diff_thetis.append((data[1].dropna()[i] - bathymetrythetis1[-1])**2)
+for i in np.linspace(0, 15.9, 160):
+    datathetis.append(i)
+    bathymetrythetis1.append(-bath.at([i, 0.55]))
+    #diff_thetis.append((data[1].dropna()[i] - bathymetrythetis1[-1])**2)
 
 df = pd.concat([pd.DataFrame(datathetis, columns=['x']), pd.DataFrame(bathymetrythetis1, columns=['bath'])], axis=1)
 
-df.to_csv('fixed_output/bed_trench_output' + str(nx) + '.csv')
+df.to_csv('fixed_output/bed_trench_output_uni_' + str(nx) + '.csv')
 
 plt.plot(datathetis, bathymetrythetis1, '.', linewidth=2, label='fixed mesh')
 plt.legend()
 plt.show()
 
-print("L2 norm: ")
-print(np.sqrt(sum(diff_thetis)))
-
+#print("L2 norm: ")
+#print(np.sqrt(sum(diff_thetis)))
+print(nx)
 print("total time: ")
 print(t2-t1)
