@@ -124,8 +124,8 @@ class BeachOptions(MorphOptions):
         self.eta_tilde = Function(self.P1DG, name='Modified elevation')        
 
         # Physical
-        self.base_viscosity = 1 #0.2 #5*10**(-1)
-        self.base_diffusivity = 0.15
+        self.base_viscosity = 1 #5*10**(-1)
+        self.base_diffusivity = 1
         self.gravity = Constant(9.81)
         self.porosity = Constant(0.4)
         self.ks = Constant(0.025)
@@ -138,13 +138,14 @@ class BeachOptions(MorphOptions):
         self.slope_eff = True
         self.angle_correction = False
         self.convective_vel_flag = True
-        self.solve_tracer = True 
+        self.solve_tracer = True
+        self.implicit_source = True        
 
         self.suspended = True
         self.bedload = True
 
-        self.wetting_and_drying_alpha = Constant(5/25)
-        self.norm_smoother_constant = Constant(10/25)
+        self.wetting_and_drying_alpha = Constant(8/25)
+        self.norm_smoother_constant = Constant(8/25)
 
         # Initial
 

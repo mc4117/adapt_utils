@@ -8,11 +8,25 @@ Created on Sun May  3 17:37:12 2020
 
 import pandas as pd
 
-df_real = pd.read_csv('fixed_output/bed_trench_output1.0.csv')
+df_real = pd.read_csv('fixed_output/bed_trench_output2.0.csv')
 df_real1 = pd.read_csv('fixed_output/bed_trench_output0.8.csv')
+df_real1a = pd.read_csv('fixed_output/bed_trench_output0.75.csv')
 df_real2 = pd.read_csv('fixed_output/bed_trench_output0.6.csv')
+df_real2a = pd.read_csv('fixed_output/bed_trench_output0.5.csv')
 df_real3 = pd.read_csv('fixed_output/bed_trench_output0.4.csv')
+df_real3a = pd.read_csv('fixed_output/bed_trench_output0.25.csv')
 df_real4 = pd.read_csv('fixed_output/bed_trench_output0.2.csv')
+
+error_list = []
+#error_list.append(0.0)
+error_list.append(sum([(df_real1['bath'][i] - df_real['bath'][i])**2 for i in range(1, len(df_real))]))
+error_list.append(sum([(df_real1a['bath'][i] - df_real['bath'][i])**2 for i in range(1, len(df_real))]))
+error_list.append(sum([(df_real2['bath'][i] - df_real['bath'][i])**2 for i in range(1, len(df_real))]))
+error_list.append(sum([(df_real2a['bath'][i] - df_real['bath'][i])**2 for i in range(1, len(df_real))]))
+error_list.append(sum([(df_real3['bath'][i] - df_real['bath'][i])**2 for i in range(1, len(df_real))]))
+error_list.append(sum([(df_real3a['bath'][i] - df_real['bath'][i])**2 for i in range(1, len(df_real))]))
+error_list.append(sum([(df_real4['bath'][i] - df_real['bath'][i])**2 for i in range(1, len(df_real))]))
+print(error_list)
 
 stop
 
