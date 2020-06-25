@@ -58,21 +58,20 @@ for i in np.linspace(0, 15.9, 160):
 
 df = pd.concat([pd.DataFrame(datathetis, columns=['x']), pd.DataFrame(bathymetrythetis1, columns=['bath'])], axis=1)
 
-df.to_csv('fixed_output/bed_trench_output_uni_' + str(nx) + '.csv')
+#df.to_csv('fixed_output/bed_trench_output_uni_' + str(nx) + '.csv')
 
 
 datathetis = []
 bathymetrythetis1 = []
 diff_thetis = []
 for i in range(len(data[0].dropna())):
-    print(i)
     datathetis.append(data[0].dropna()[i])
     bathymetrythetis1.append(-bath.at([np.round(data[0].dropna()[i], 3), 0.55]))
     diff_thetis.append((data[1].dropna()[i] - bathymetrythetis1[-1])**2)
 
 df = pd.concat([pd.DataFrame(datathetis, columns=['x']), pd.DataFrame(bathymetrythetis1, columns=['bath'])], axis=1)
 
-df.to_csv('fixed_output/bed_trench_output' + str(nx) + '.csv')
+#df.to_csv('fixed_output/bed_trench_output' + str(nx) + '.csv')
 
 #print("L2 norm: ")
 print(np.sqrt(sum(diff_thetis)))

@@ -67,6 +67,16 @@ trench = th.conditional(th.le(x, 5), (0.1*(y-0.55)) + depth_riv, th.conditional(
                         th.conditional(th.le(x, 9.5), (0.1*(y-0.55)) + depth_trench, th.conditional(th.le(x, 11), (0.1*(y-0.55)) - (1/1.5)*depth_diff*(x-11) + depth_riv, (0.1*(y-0.55)) + depth_riv))))
 bathymetry_2d.interpolate(-trench)
 
+
+fig, ax = plt.subplots()
+th.plot(test)
+plt.xlabel(r'$x(m)$', axes = ax)
+plt.ylabel(r'$y(m)$')
+plt.text(21, 0.5, r'$z_{b}$ (m)', fontsize = 12, rotation=270)
+plt.show()
+
+
+
 """
 # define initial elevation
 elev_init = th.Function(P1_2d).interpolate(th.Constant(0.4))
@@ -125,3 +135,4 @@ f.write(str(np.sqrt(sum(diff_thetis))))
 f.write("\n")
 f.write(str(t2-t1))
 f.close()
+
