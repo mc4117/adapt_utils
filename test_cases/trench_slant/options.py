@@ -37,7 +37,7 @@ class TrenchSlantOptions(MorphOptions):
         self.plot_timeseries = plot_timeseries
         if mesh is None:
             self.t_old = Constant(0.0)
-            self.default_mesh = RectangleMesh(np.int(16*5*nx), np.ceil(5*ny), 16, 1.1)
+            self.default_mesh = RectangleMesh(np.int(16*5*nx), np.int(np.ceil(5*ny)), 16, 1.1)
             self.P1DG = FunctionSpace(self.default_mesh, "DG", 1)
             self.P1 = FunctionSpace(self.default_mesh, "CG", 1)
             self.P1_vec = VectorFunctionSpace(self.default_mesh, "CG", 1)
@@ -76,7 +76,7 @@ class TrenchSlantOptions(MorphOptions):
             self.set_up_morph_model(self.input_dir, mesh)
 
         # Time integration
-        self.dt = 0.3
+        self.dt = 0.2
         self.end_time = float(self.num_hours*3600.0/self.morfac)
         self.dt_per_export = 40
         self.dt_per_remesh = 40

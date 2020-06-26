@@ -13,9 +13,9 @@ import pandas as pd
 import pylab as plt
 import time
 
-timestep = 0.3
+timestep = 0.1
 
-fac = 0.125
+fac = 4
 
 def boundary_conditions_fn_trench(bathymetry_2d, flag, morfac=1, t_new=0, state='initial'):
     """
@@ -47,7 +47,7 @@ def boundary_conditions_fn_trench(bathymetry_2d, flag, morfac=1, t_new=0, state=
 lx = 16
 ly = 1.1
 nx = np.int(lx*5*fac)  # this has to be at least double the lx as otherwise don't get trench with right gradient
-ny = 5
+ny = 5*2
 mesh2d = th.RectangleMesh(nx, ny, lx, ly)
 
 x, y = th.SpatialCoordinate(mesh2d)
