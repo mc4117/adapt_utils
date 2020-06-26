@@ -28,7 +28,7 @@ op = TrenchOptions(approach='fixed_mesh',
                    num_adapt=1,
                    friction='nikuradse',
                    nx=nx,
-                   ny=1,
+                   ny=2,
                    r_adapt_rtol=1.0e-3,
                    init = True)
 
