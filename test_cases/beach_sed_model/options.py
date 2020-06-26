@@ -74,7 +74,7 @@ class BeachOptions(MorphOptions):
         # Stabilisation
         self.stabilisation = 'lax_friedrichs'
         
-        self.morfac = Constant(25)
+        self.morfac = Constant(50)
 
         if mesh is None:
             self.set_up_morph_model(self.default_mesh)
@@ -124,7 +124,7 @@ class BeachOptions(MorphOptions):
         self.eta_tilde = Function(self.P1DG, name='Modified elevation')        
 
         # Physical
-        self.base_viscosity = 1 #5*10**(-1)
+        self.base_viscosity = 0.5 #5*10**(-1)
         self.base_diffusivity = 100
         self.gravity = Constant(9.81)
         self.porosity = Constant(0.4)
@@ -226,7 +226,7 @@ class BeachOptions(MorphOptions):
     def set_boundary_conditions_tracer(self, sed_model):
         inflow_tag = 1
         boundary_conditions = {}
-        boundary_conditions[inflow_tag] = {'value': sed_model.equiltracer}
+        #boundary_conditions[inflow_tag] = {'value': sed_model.equiltracer}
         return boundary_conditions
 
     def get_update_forcings(self, solver_obj):

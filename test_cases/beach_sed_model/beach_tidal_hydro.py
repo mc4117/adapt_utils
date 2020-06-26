@@ -88,7 +88,7 @@ value = 1/40
 
 sponge_fn = th.Function(V).interpolate(th.conditional(x>=100, -399 + 4*x, th.Constant(1.0)))
 
-solver_obj, update_forcings_hydrodynamics, outputdir = morph.hydrodynamics_only(boundary_conditions_fn_balzano, mesh2d, bathymetry_2d, uv_init, elev_init, wetting_and_drying = True, wetting_alpha = value, fluc_bcs = True, average_size = 200 * (10**(-6)), dt=0.05, t_end=100, friction = 'manning', sponge_viscosity = sponge_fn, viscosity = 1)
+solver_obj, update_forcings_hydrodynamics, outputdir = morph.hydrodynamics_only(boundary_conditions_fn_balzano, mesh2d, bathymetry_2d, uv_init, elev_init, wetting_and_drying = True, wetting_alpha = value, fluc_bcs = True, average_size = 200 * (10**(-6)), dt=0.05, t_end=100, friction = 'manning', sponge_viscosity = sponge_fn, viscosity = 0.5)
 
 # run model
 
