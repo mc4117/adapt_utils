@@ -28,7 +28,7 @@ def export_final_state(inputdir, bathymetry_2d):
 
 t1 = time.time()
 
-nx = 2.0
+nx = 4.0
 
 dir = 'hydrodynamics_trench_slant_' + str(nx)
 
