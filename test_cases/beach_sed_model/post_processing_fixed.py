@@ -10,7 +10,7 @@ import pandas as pd
 import numpy as np
 import pylab as plt
 
-df_real = pd.read_csv('final_result_nx4.0_ny1.csv')
+df_real = pd.read_csv('final_result_nx4.0_ny2.csv')
 
 df_test = pd.read_csv('final_result_nx2.0_ny1.csv')
 
