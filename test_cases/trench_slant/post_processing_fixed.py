@@ -8,6 +8,8 @@ Created on Thu Jun 25 16:37:44 2020
 
 import thetis as th
 import firedrake as fire
+import pylab as plt
+import numpy as np
 
 def initialise_fields(mesh2d, inputdir):
     """
@@ -33,10 +35,22 @@ bath5 =  initialise_fields(new_mesh, 'hydrodynamics_trench_slant_bath_2.0')
 bath_real = initialise_fields(new_mesh, 'hydrodynamics_trench_slant_bath_4.0')
 
 errorlist = []
-errorlist.append(fire.errornorm(bath1, bath_real))
-errorlist.append(fire.errornorm(bath2, bath_real))
-errorlist.append(fire.errornorm(bath3, bath_real))
-errorlist.append(fire.errornorm(bath4, bath_real))
 errorlist.append(fire.errornorm(bath5, bath_real))
+errorlist.append(fire.errornorm(bath4, bath_real))
+errorlist.append(fire.errornorm(bath3, bath_real))
+errorlist.append(fire.errornorm(bath2, bath_real))
+errorlist.append(fire.errornorm(bath1, bath_real))
+
 
 print(errorlist)
+
+plt.loglog([0.1, 0.25, 0.5, 1, 2], errorlist, '-o')
+plt.ylabel('Error norm (m)')
+plt.xlabel(r'$\Delta x$ (m)')
+plt.show()
+
+logx = np.log([0.1, 0.25, 0.5, 1, 2])
+log_error = np.log(errorlist)
+poly = np.polyfit(logx, log_error, 1)
+print(poly[0])
+

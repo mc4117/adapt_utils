@@ -34,7 +34,7 @@ error_list.append(sum([(df_test4['bath'][i] - df_real['bath'][i])**2 for i in ra
 error_list.append(sum([(df_test5['bath'][i] - df_real['bath'][i])**2 for i in range(1, len(df_real))]))
 print(error_list)
 
-"""
+
 #plt.plot([0.25, 0.5, 2/3, 1, 4/3, 2, 4], error_list)
 
 plt.loglog([0.5, 2/3, 1, 4/3, 2, 4], error_list, '-o')
@@ -43,20 +43,17 @@ plt.xlabel(r'$\Delta x$ (m)')
 plt.show()
 
 
-logx = np.log([0.5, 2/3, 1, 4/3, 2])
-log_error = np.log(error_list[:-1])
-np.polyfit(logx, log_error, 1)
+logx = np.log([0.5, 2/3, 1, 4/3, 2, 4])
+log_error = np.log(error_list)
+print(np.polyfit(logx, log_error, 1))
 
 # plot
 
-
-
-import pylab as plt
-
+"""
 plt.plot(df_real['x'], df_real['bath'], label = 'nx = 2')
 plt.plot(df_test1['x'], df_test1['bath'], label = 'nx = 1')
 plt.plot(df_test2['x'], df_test2['bath'], label = 'nx = 0.5')
 plt.plot(df_test3['x'], df_test3['bath'], label = 'nx = 0.25')
 plt.legend()
-"""
 
+"""

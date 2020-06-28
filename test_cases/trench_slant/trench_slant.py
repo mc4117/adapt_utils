@@ -67,6 +67,7 @@ trench = th.conditional(th.le(x, 5), (0.1*(y-0.55)) + depth_riv, th.conditional(
                         th.conditional(th.le(x, 9.5), (0.1*(y-0.55)) + depth_trench, th.conditional(th.le(x, 11), (0.1*(y-0.55)) - (1/1.5)*depth_diff*(x-11) + depth_riv, (0.1*(y-0.55)) + depth_riv))))
 bathymetry_2d.interpolate(-trench)
 
+stop
 
 fig, ax = plt.subplots()
 th.plot(test)

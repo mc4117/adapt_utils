@@ -13,14 +13,14 @@ from adapt_utils.norms import local_frobenius_norm
 
 t1 = time.time()
 
-nx = 1.0
+nx = 0.1
 alpha = 200.0
 
 ts = time.time()
 st = datetime.datetime.fromtimestamp(ts).strftime('%Y-%m-%d %H:%M:%S')
 outputdir = 'outputs' + st
 
-dir = 'hydrodynamics_trench' #'_' + str(nx)
+dir = 'hydrodynamics_trench_' + str(nx)
 
 op = TrenchOptions(approach='monge_ampere',
                    input_dir = dir,
@@ -97,27 +97,41 @@ data = pd.read_csv('experimental_data.csv', header=None)
 datathetis = []
 bathymetrythetis1 = []
 diff_thetis = []
+for i in np.linspace(0, 15.9, 160):
+    datathetis.append(i)
+    bathymetrythetis1.append(-bath.at([i, 0.55]))
+    #diff_thetis.append((data[1].dropna()[i] - bathymetrythetis1[-1])**2)
+
+df = pd.concat([pd.DataFrame(datathetis, columns=['x']), pd.DataFrame(bathymetrythetis1, columns=['bath'])], axis=1)
+
+df.to_csv('adapt_output/bed_trench_output_uni_' + str(nx) + '_' + str(alpha) + '.csv')
+
+datathetis = []
+bathymetrythetis1 = []
+diff_thetis = []
 for i in range(len(data[0].dropna())):
     print(i)
     datathetis.append(data[0].dropna()[i])
     bathymetrythetis1.append(-bath.at([np.round(data[0].dropna()[i], 3), 0.55]))
     diff_thetis.append((data[1].dropna()[i] - bathymetrythetis1[-1])**2)
 
-df = pd.concat([pd.DataFrame(datathetis, columns=['x']), pd.DataFrame(bathymetrythetis1, columns=['bath'])], axis=1)
+df_exp = pd.concat([pd.DataFrame(datathetis, columns=['x']), pd.DataFrame(bathymetrythetis1, columns=['bath'])], axis=1)
 
-#df.to_csv('adapt_output2/bed_trench_output_' + str(nx) + '_' + str(alpha) + '.csv')
+df_exp.to_csv('adapt_output/bed_trench_output_' + str(nx) + '_' + str(alpha) + '.csv')
 
-plt.plot(datathetis, bathymetrythetis1, '.', linewidth=2, label='adapted mesh')
-plt.legend()
-plt.show()
 
-print("L2 norm: ")
+
+print("Total error: ")
 print(np.sqrt(sum(diff_thetis)))
 
 print("total time: ")
 print(t2-t1)
 
-#f = open("adapt_output2/output_frob_norm_" + str(nx) + '_' + str(alpha) + '.txt', "w+")
+
+df_real = pd.read_csv('fixed_output/bed_trench_output_uni_4.csv')
+print("Mesh error: ")
+print(sum([(df['bath'][i] - df_real['bath'][i])**2 for i in range(len(df_real))]))
+#f = open("adapt_output/output_frob_norm_" + str(nx) + '_' + str(alpha) + '.txt', "w+")
 #f.write(str(np.sqrt(sum(diff_thetis))))
 #f.write("\n")
 #f.write(str(t2-t1))

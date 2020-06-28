@@ -11,9 +11,9 @@ from adapt_utils.swe.morphological.solver import UnsteadyShallowWaterProblem
 from adapt_utils.adapt import recovery
 from adapt_utils.norms import local_frobenius_norm
 
-nx = 0.5
+nx = 0.25
 
-alpha_star = 200.0
+alpha_star = 20.0
 
 ts = time.time()
 st = datetime.datetime.fromtimestamp(ts).strftime('%Y-%m-%d %H:%M:%S')
@@ -28,7 +28,7 @@ op = BeachOptions(approach='monge_ampere',
                    friction='manning',
                    nx=nx,
                    ny=1,
-                   input_dir = 'hydrodynamics_beach_l_sep_nx_110.0',
+                   input_dir = 'hydrodynamics_beach_l_sep_nx_55',
                    output_dir = outputdir,
                    r_adapt_rtol=1.0e-3,
                    init = True)
@@ -76,7 +76,7 @@ def wet_dry_interface_monitor(mesh, alpha=alpha_star, beta=1.0):
     H = Function(P1)
     tau = TestFunction(P1)
     
-    K = 1000*(0.4**2)/4
+    K = 100*(0.4**2)/4
     a = (inner(tau, H)*dx)+(K*inner(tau.dx(1), H.dx(1))*dx) - inner(tau, mon_init)*dx
     solve(a == 0, H)    
 
@@ -89,7 +89,7 @@ swp.solve(uses_adjoint=False)
 
 t2 = time.time()
 
-new_mesh = RectangleMesh(220*2, 10, 220, 10)
+new_mesh = RectangleMesh(220*4, 10*2, 220, 10)
 
 bath = Function(FunctionSpace(new_mesh, "CG", 1)).project(swp.solver_obj.fields.bathymetry_2d)
 
@@ -102,8 +102,8 @@ for i in np.linspace(0, 219, 220):
     
 df = pd.concat([pd.DataFrame(xaxisthetis1, columns = ['x']), pd.DataFrame(baththetis1, columns = ['bath'])], axis = 1)
 
-df_real = pd.read_csv('final_result_nx2.0.csv')
-df_real2 = pd.read_csv('final_result_nx4.0.csv')
+df_real = pd.read_csv('final_result_nx2.0_ny1.csv')
+df_real2 = pd.read_csv('final_result_nx4.0_ny2.csv')
 
 print(alpha_star)
 print(sum([(df['bath'][i] - df_real['bath'][i])**2 for i in range(len(df_real))]))
