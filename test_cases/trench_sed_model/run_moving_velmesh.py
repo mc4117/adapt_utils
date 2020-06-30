@@ -14,7 +14,7 @@ from adapt_utils.norms import local_frobenius_norm
 t1 = time.time()
 
 nx = 0.4
-alpha = 4
+alpha = 0.15
 
 ts = time.time()
 st = datetime.datetime.fromtimestamp(ts).strftime('%Y-%m-%d %H:%M:%S')
@@ -40,50 +40,47 @@ swp = UnsteadyShallowWaterProblem(op, levels=0)
 swp.setup_solver()
 
 
-def gradient_interface_monitor(mesh, alpha=alpha, gamma=0.0):
-
+def vel_interface_monitor(mesh, alpha=alpha, beta=1.0):
     """
-    Monitor function focused around the steep_gradient (budd acta numerica)
+    Monitor function focused around the wet-dry interface.
 
     NOTE: Defined on the *computational* mesh.
 
+    :kwarg alpha: controls the size of the dense region surrounding the coast.
+    :kwarg beta: controls the level of refinement in this region.
     """
     P1 = FunctionSpace(mesh, "CG", 1)
-
-    # eta = swp.solution.split()[1]
-    b = swp.solver_obj.fields.bathymetry_2d
-    # bath_gradient = recovery.construct_gradient(b)
-    bath_hess = recovery.construct_hessian(b, op=op)
-    frob_bath_hess = Function(b.function_space()).project(local_frobenius_norm(bath_hess))
-
-    # current_mesh = eta.function_space().mesh()
-    # P1_current = FunctionSpace(current_mesh, "CG", 1)
-    # bath_dx_sq = interpolate(pow(bath_gradient[0], 2), P1_current)
-    # bath_dy_sq = interpolate(pow(bath_gradient[1], 2), P1_current)
-    # bath_dx_dx_sq = interpolate(pow(bath_dx_sq.dx(0), 2), P1_current)
-    # bath_dy_dy_sq = interpolate(pow(bath_dy_sq.dx(1), 2), P1_current)
-    # norm = interpolate(conditional(bath_dx_dx_sq + bath_dy_dy_sq > 10**(-7), bath_dx_dx_sq + bath_dy_dy_sq, Constant(10**(-7))), P1_current)
-    # norm_two = interpolate(bath_dx_dx_sq + bath_dy_dy_sq, P1_current)
-    # norm_one = interpolate(bath_dx_sq + bath_dy_sq, P1_current)
-    # norm_tmp = interpolate(bath_dx_sq/norm, P1_current)
-    # norm_one_proj = project(norm_one, P1)
-    norm_two_proj = project(frob_bath_hess, P1)
-
-    H = Function(P1)
-    tau = TestFunction(P1)
-    n = FacetNormal(mesh)
-
-    mon_init = project(sqrt(Constant(1.0) + alpha * norm_two_proj), P1)
-
-    K = 10*(0.4**2)/4
-    a = (inner(tau, H)*dx)+(K*inner(grad(tau), grad(H))*dx) - (K*(tau*inner(grad(H), n)))*ds
-    a -= inner(tau, mon_init)*dx
-    solve(a == 0, H)
-
-    return H
+    eta = swp.solution.split()[1]
+    uv = swp.solution.split()[0]
 
 
-swp.monitor_function = gradient_interface_monitor
+    #b = swp.solver_obj.fields.bathymetry_2d
+    current_mesh = eta.function_space().mesh()
+    P1_current = FunctionSpace(current_mesh, "CG", 1)
+
+    horizontal_velocity = interpolate(uv[0], P1_current)
+    
+    abs_horizontal_velocity = interpolate(abs(horizontal_velocity), P1_current)
+
+
+    uv_gradient = recovery.construct_gradient(horizontal_velocity)
+    div_uv = interpolate(sqrt(inner(uv_gradient, uv_gradient)), P1_current)
+    div_uv_star = interpolate(conditional(div_uv/(beta*max(div_uv.dat.data[:])) < Constant(1), 
+                                          div_uv/(beta*max(div_uv.dat.data[:])) , Constant(1)), P1_current)
+    
+    abs_uv_star = interpolate(conditional(abs_horizontal_velocity/(beta*max(abs_horizontal_velocity.dat.data[:])) < Constant(1), 
+                                     abs_horizontal_velocity/(beta*max(abs_horizontal_velocity.dat.data[:])) , Constant(1)), P1_current)
+    
+    comp = interpolate(conditional(abs_uv_star > div_uv_star, abs_uv_star, div_uv_star)**2, P1_current)      
+    comp_new = project(comp, P1)
+    comp_new2 = interpolate(conditional(comp_new > Constant(0.0), comp_new, Constant(0.0)), P1)
+    mon_init = project(sqrt(1.0 + alpha * comp_new2), P1)
+ 
+
+    return mon_init
+
+
+swp.monitor_function = vel_interface_monitor
 swp.solve(uses_adjoint=False)
 
 t2 = time.time()
