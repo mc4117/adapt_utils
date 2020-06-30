@@ -15,7 +15,9 @@ df_real1 = pd.read_csv('fixed_output/bed_trench_output_uni_2.0.csv')
 df_real2 = pd.read_csv('fixed_output/bed_trench_output_uni_0.8.csv')
 df_real3 = pd.read_csv('fixed_output/bed_trench_output_uni_0.4.csv')
 df_real4 = pd.read_csv('fixed_output/bed_trench_output_uni_0.2.csv')
-df_real4a = pd.read_csv('fixed_output/bed_trench_output_uni_0.1.csv')
+df_real4a = pd.read_csv('fixed_output/bed_trench_output_uni_0.125.csv')
+df_real4b = pd.read_csv('fixed_output/bed_trench_output_uni_0.1.csv')
+df_real5a = pd.read_csv('fixed_output/bed_trench_output_uni_0.05.csv')
 
 error_list = []
 #error_list.append(0.0)
@@ -24,6 +26,8 @@ error_list.append(sum([(df_real2['bath'][i] - df_real['bath'][i])**2 for i in ra
 error_list.append(sum([(df_real3['bath'][i] - df_real['bath'][i])**2 for i in range(len(df_real))]))
 error_list.append(sum([(df_real4['bath'][i] - df_real['bath'][i])**2 for i in range(len(df_real))]))
 error_list.append(sum([(df_real4a['bath'][i] - df_real['bath'][i])**2 for i in range(len(df_real))]))
+error_list.append(sum([(df_real4b['bath'][i] - df_real['bath'][i])**2 for i in range(len(df_real))]))
+error_list.append(sum([(df_real5a['bath'][i] - df_real['bath'][i])**2 for i in range(len(df_real))]))
 print(error_list)
 
 plt.loglog([0.1, 0.25, 0.5, 1, 2], error_list, '-o')

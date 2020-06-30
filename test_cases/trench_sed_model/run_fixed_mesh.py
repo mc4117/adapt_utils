@@ -10,7 +10,7 @@ from adapt_utils.swe.morphological.solver import UnsteadyShallowWaterProblem
 
 t1 = time.time()
 
-nx = 0.4
+nx = 0.5
 
 dir = 'hydrodynamics_trench_' + str(nx)
 

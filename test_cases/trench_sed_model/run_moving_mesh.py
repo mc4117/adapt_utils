@@ -75,7 +75,7 @@ def gradient_interface_monitor(mesh, alpha=alpha, gamma=0.0):
 
     mon_init = project(sqrt(Constant(1.0) + alpha * norm_two_proj), P1)
 
-    K = 10*(0.4**2)/4
+    K = 10*(0.1**2)/4
     a = (inner(tau, H)*dx)+(K*inner(grad(tau), grad(H))*dx) - (K*(tau*inner(grad(H), n)))*ds
     a -= inner(tau, mon_init)*dx
     solve(a == 0, H)
@@ -119,14 +119,14 @@ df_exp = pd.concat([pd.DataFrame(datathetis, columns=['x']), pd.DataFrame(bathym
 
 #df_exp.to_csv('adapt_output/bed_trench_output_' + str(nx) + '_' + str(alpha) + '.csv')
 
-
+print(alpha)
 
 print("Total error: ")
 print(np.sqrt(sum(diff_thetis)))
 
 print("total time: ")
 print(t2-t1)
-
+print(nx)
 
 df_real = pd.read_csv('fixed_output/bed_trench_output_uni_4.csv')
 print("Mesh error: ")
@@ -136,3 +136,5 @@ print(sum([(df['bath'][i] - df_real['bath'][i])**2 for i in range(len(df_real))]
 #f.write("\n")
 #f.write(str(t2-t1))
 #f.close()
+
+
