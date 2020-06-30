@@ -10,7 +10,7 @@ from adapt_utils.swe.morphological.solver import UnsteadyShallowWaterProblem
 
 t1 = time.time()
 
-nx = 4
+nx = 0.5
 
 dir = 'hydrodynamics_trench_' + str(nx)
 
@@ -28,7 +28,7 @@ op = TrenchOptions(approach='fixed_mesh',
                    num_adapt=1,
                    friction='nikuradse',
                    nx=nx,
-                   ny=2,
+                   ny=1,
                    r_adapt_rtol=1.0e-3,
                    init = True)
 

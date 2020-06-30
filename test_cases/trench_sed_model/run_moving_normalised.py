@@ -13,8 +13,8 @@ from adapt_utils.norms import local_frobenius_norm
 
 t1 = time.time()
 
-nx = 0.4
-alpha = 0.2
+nx = 0.5
+alpha = 12
 
 ts = time.time()
 st = datetime.datetime.fromtimestamp(ts).strftime('%Y-%m-%d %H:%M:%S')
@@ -119,6 +119,7 @@ df_exp = pd.concat([pd.DataFrame(datathetis, columns=['x']), pd.DataFrame(bathym
 
 df_exp.to_csv('adapt_output/bed_trench_output_' + str(nx) + '_' + str(alpha) + '.csv')
 
+print(nx)
 print(alpha)
 
 print("Total error: ")
