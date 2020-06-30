@@ -25,8 +25,6 @@ error_list.append(sum([(df_real3['bath'][i] - df_real['bath'][i])**2 for i in ra
 error_list.append(sum([(df_real4['bath'][i] - df_real['bath'][i])**2 for i in range(len(df_real))]))
 error_list.append(sum([(df_real4a['bath'][i] - df_real['bath'][i])**2 for i in range(len(df_real))]))
 print(error_list)
-stop
-#plt.plot([0.25, 0.5, 2/3, 1, 4/3, 2, 4], error_list)
 
 plt.loglog([0.1, 0.25, 0.5, 1, 2], error_list, '-o')
 plt.ylabel('Error norm (m)')
