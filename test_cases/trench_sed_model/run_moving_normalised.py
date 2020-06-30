@@ -13,8 +13,8 @@ from adapt_utils.norms import local_frobenius_norm
 
 t1 = time.time()
 
-nx = 0.4
-alpha = 5
+nx = 1
+alpha = 0
 
 ts = time.time()
 st = datetime.datetime.fromtimestamp(ts).strftime('%Y-%m-%d %H:%M:%S')
