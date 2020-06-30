@@ -13,7 +13,7 @@ from adapt_utils.norms import local_frobenius_norm
 
 t1 = time.time()
 
-nx = 0.4
+nx = 0.2
 alpha = 1
 
 ts = time.time()
@@ -75,12 +75,12 @@ def gradient_interface_monitor(mesh, alpha=alpha, gamma=0.0):
 
     mon_init = project(sqrt(Constant(1.0) + alpha * norm_two_proj), P1)
 
-    K = 10*(0.1**2)/4
+    K = 10*(0.4**2)/4
     a = (inner(tau, H)*dx)+(K*inner(grad(tau), grad(H))*dx) - (K*(tau*inner(grad(H), n)))*ds
     a -= inner(tau, mon_init)*dx
     solve(a == 0, H)
 
-    return H
+    return mon_init
 
 
 swp.monitor_function = gradient_interface_monitor
@@ -126,7 +126,7 @@ print(np.sqrt(sum(diff_thetis)))
 
 print("total time: ")
 print(t2-t1)
-print(nx)
+
 
 df_real = pd.read_csv('fixed_output/bed_trench_output_uni_4.csv')
 print("Mesh error: ")
@@ -136,5 +136,3 @@ print(sum([(df['bath'][i] - df_real['bath'][i])**2 for i in range(len(df_real))]
 #f.write("\n")
 #f.write(str(t2-t1))
 #f.close()
-
-
