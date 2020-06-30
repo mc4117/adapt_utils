@@ -13,8 +13,8 @@ from adapt_utils.norms import local_frobenius_norm
 
 t1 = time.time()
 
-nx = 0.1
-alpha = 200.0
+nx = 0.4
+alpha = 0.001
 
 ts = time.time()
 st = datetime.datetime.fromtimestamp(ts).strftime('%Y-%m-%d %H:%M:%S')
@@ -104,7 +104,7 @@ for i in np.linspace(0, 15.9, 160):
 
 df = pd.concat([pd.DataFrame(datathetis, columns=['x']), pd.DataFrame(bathymetrythetis1, columns=['bath'])], axis=1)
 
-df.to_csv('adapt_output/bed_trench_output_uni_' + str(nx) + '_' + str(alpha) + '.csv')
+#df.to_csv('adapt_output/bed_trench_output_uni_' + str(nx) + '_' + str(alpha) + '.csv')
 
 datathetis = []
 bathymetrythetis1 = []
@@ -117,7 +117,7 @@ for i in range(len(data[0].dropna())):
 
 df_exp = pd.concat([pd.DataFrame(datathetis, columns=['x']), pd.DataFrame(bathymetrythetis1, columns=['bath'])], axis=1)
 
-df_exp.to_csv('adapt_output/bed_trench_output_' + str(nx) + '_' + str(alpha) + '.csv')
+#df_exp.to_csv('adapt_output/bed_trench_output_' + str(nx) + '_' + str(alpha) + '.csv')
 
 
 

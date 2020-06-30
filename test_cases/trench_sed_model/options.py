@@ -2,7 +2,6 @@ from thetis import *
 from thetis.configuration import *
 
 from adapt_utils.swe.morphological.morphological_options import MorphOptions
-from thetis.sediments import SedimentModel
 from thetis.options import ModelOptions2d
 
 import os

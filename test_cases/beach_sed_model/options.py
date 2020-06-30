@@ -281,6 +281,7 @@ class BeachOptions(MorphOptions):
             self.eta_tilde.project(eta + bathymetry_displacement(eta))
             self.eta_tilde_file.write(self.eta_tilde)
             self.bath_file.write(self.bath_export)
+            self.bath_init = self.set_bathymetry(self.bath_export.function_space())
             self.diff_bathy.project(self.bath_export - self.bath_init)
             self.diff_bath_file.write(self.diff_bathy)
         return export_func 
