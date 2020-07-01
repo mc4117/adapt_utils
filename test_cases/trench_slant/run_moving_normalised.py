@@ -82,37 +82,49 @@ swp.solve(uses_adjoint=False)
 
 t2 = time.time()
 
-new_mesh = RectangleMesh(16*5*5, 5*1, 16, 1.1)
+new_mesh = RectangleMesh(16*5*4, 5*4, 16, 1.1)
 
 bath = Function(FunctionSpace(new_mesh, "CG", 1)).project(swp.solver_obj.fields.bathymetry_2d)
 
-data = pd.read_csv('experimental_data.csv', header=None)
+def initialise_fields(mesh2d, inputdir):
+    """
+    Initialise simulation with results from a previous simulation
+    """
+    V = th.FunctionSpace(mesh2d, 'CG', 1)
+    # elevation
+    with th.timed_stage('initialising bathymetry'):
+        chk = th.DumbCheckpoint(inputdir + "/bathymetry", mode=th.FILE_READ)
+        bath = th.Function(V, name="bathymetry")
+        chk.load(bath)
+        chk.close()
+        
+    return bath
 
-datathetis = []
-bathymetrythetis1 = []
-diff_thetis = []
-for i in range(len(data[0].dropna())):
-    print(i)
-    datathetis.append(data[0].dropna()[i])
-    bathymetrythetis1.append(-bath.at([np.round(data[0].dropna()[i], 3), 0.55]))
-    diff_thetis.append((data[1].dropna()[i] - bathymetrythetis1[-1])**2)
+def export_final_state(inputdir, bathymetry_2d):
+    """
+    Export fields to be used in a subsequent simulation
+    """
+    if not os.path.exists(inputdir):
+        os.makedirs(inputdir)
+    print_output("Exporting fields for subsequent simulation")
 
-df = pd.concat([pd.DataFrame(datathetis, columns=['x']), pd.DataFrame(bathymetrythetis1, columns=['bath'])], axis=1)
+    chk = DumbCheckpoint(inputdir + "/bathymetry", mode=FILE_CREATE)
+    chk.store(bathymetry_2d, name="bathymetry")
+    File(inputdir + '/bathout.pvd').write(bathymetry_2d)
+    chk.close()
+    
+    plex = bathymetry_2d.function_space().mesh()._plex
+    viewer = PETSc.Viewer().createHDF5(inputdir + '/myplex.h5', 'w')
+    viewer(plex)        
 
-df.to_csv('adapt_output2/bed_trench_output_' + str(nx) + '_' + str(alpha) + '.csv')
+export_final_state("adapt_output/hydrodynamics_trench_slant_bath_"+str(alpha) + "_" + str(nx), bath)
 
-plt.plot(datathetis, bathymetrythetis1, '.', linewidth=2, label='adapted mesh')
-plt.legend()
-plt.show()
+bath_real = initialise_fields(new_mesh, 'hydrodynamics_trench_slant_bath_4.0')
 
-print("L2 norm: ")
-print(np.sqrt(sum(diff_thetis)))
+print(nx)
+print(alpha)
+print('L2')
+print(fire.errornorm(bath, bath_real))
 
 print("total time: ")
 print(t2-t1)
-
-f = open("adapt_output2/output_frob_norm_" + str(nx) + '_' + str(alpha) + '.txt', "w+")
-f.write(str(np.sqrt(sum(diff_thetis))))
-f.write("\n")
-f.write(str(t2-t1))
-f.close()
