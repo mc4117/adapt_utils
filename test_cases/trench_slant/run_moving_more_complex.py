@@ -15,7 +15,7 @@ from adapt_utils.norms import local_frobenius_norm
 
 t1 = time.time()
 
-nx = 0.8
+nx = 0.4
 alpha = 5
 
 ts = time.time()
@@ -54,30 +54,20 @@ def gradient_interface_monitor(mesh, alpha=alpha, gamma=0.0):
     """
     P1 = FunctionSpace(mesh, "CG", 1)
 
-    # eta = swp.solution.split()[1]
     b = swp.solver_obj.fields.bathymetry_2d
-    # bath_gradient = recovery.construct_gradient(b)
+    bath_gradient = recovery.construct_gradient(b)
     bath_hess = recovery.construct_hessian(b, op=op)
     frob_bath_hess = Function(b.function_space()).project(local_frobenius_norm(bath_hess))
     frob_bath_norm = Function(b.function_space()).project(frob_bath_hess/max(frob_bath_hess.dat.data[:]))
-    # current_mesh = eta.function_space().mesh()
-    # P1_current = FunctionSpace(current_mesh, "CG", 1)
-    # bath_dx_sq = interpolate(pow(bath_gradient[0], 2), P1_current)
-    # bath_dy_sq = interpolate(pow(bath_gradient[1], 2), P1_current)
-    # bath_dx_dx_sq = interpolate(pow(bath_dx_sq.dx(0), 2), P1_current)
-    # bath_dy_dy_sq = interpolate(pow(bath_dy_sq.dx(1), 2), P1_current)
-    # norm = interpolate(conditional(bath_dx_dx_sq + bath_dy_dy_sq > 10**(-7), bath_dx_dx_sq + bath_dy_dy_sq, Constant(10**(-7))), P1_current)
-    # norm_two = interpolate(bath_dx_dx_sq + bath_dy_dy_sq, P1_current)
-    # norm_one = interpolate(bath_dx_sq + bath_dy_sq, P1_current)
-    # norm_tmp = interpolate(bath_dx_sq/norm, P1_current)
-    # norm_one_proj = project(norm_one, P1)
-    norm_two_proj = project(frob_bath_norm, P1)
-
-    H = Function(P1)
-    tau = TestFunction(P1)
-    n = FacetNormal(mesh)
-
-    mon_init = project(sqrt(Constant(1.0) + alpha * norm_two_proj), P1)
+    current_mesh = b.function_space().mesh()
+    import ipdb; ipdb.set_trace()
+    l2_bath_grad = Function(b.function_space()).project(local_norm(bath_gradient))
+    bath_dx_l2_norm = Function(b.function_space()).interpolate(l2_bath_grad/max(l2_bath_grad.dat.data[:]))
+    
+    comp = interpolate(conditional(bath_dx_l2_norm > frob_bath_norm, bath_dx_l2_norm, frob_bath_norm), b.function_space())  
+    comp_new = project(comp, P1)
+    comp_new2 = interpolate(conditional(comp_new > Constant(0.0), comp_new, Constant(0.0)), P1)
+    mon_init = project(sqrt(Constant(1.0) + alpha * comp_new2), P1)
 
     #K = 10*(0.2**2)/4
     #a = (inner(tau, H)*dx)+(K*inner(grad(tau), grad(H))*dx) - (K*(tau*inner(grad(H), n)))*ds
@@ -127,7 +117,7 @@ def export_final_state(inputdir, bathymetry_2d):
     viewer = PETSc.Viewer().createHDF5(inputdir + '/myplex.h5', 'w')
     viewer(plex)        
 
-export_final_state("adapt_output/hydrodynamics_trench_slant_bath_"+str(alpha) + "_" + str(nx), bath)
+export_final_state("adapt_output/hydrodynamics_trench_slant_bath_c"+str(alpha) + "_" + str(nx), bath)
 
 bath_real = initialise_fields(new_mesh, 'hydrodynamics_trench_slant_bath_4.0')
 

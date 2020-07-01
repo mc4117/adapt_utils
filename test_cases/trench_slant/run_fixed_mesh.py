@@ -1,4 +1,5 @@
 from thetis import *
+import firedrake as fire
 
 import pylab as plt
 import pandas as pd
@@ -24,11 +25,25 @@ def export_final_state(inputdir, bathymetry_2d):
     
     plex = bathymetry_2d.function_space().mesh()._plex
     viewer = PETSc.Viewer().createHDF5(inputdir + '/myplex.h5', 'w')
-    viewer(plex)        
+    viewer(plex)
+    
+def initialise_fields(mesh2d, inputdir):
+    """
+    Initialise simulation with results from a previous simulation
+    """
+    V = FunctionSpace(mesh2d, 'CG', 1)
+    # elevation
+    with timed_stage('initialising bathymetry'):
+        chk = DumbCheckpoint(inputdir + "/bathymetry", mode=FILE_READ)
+        bath = Function(V, name="bathymetry")
+        chk.load(bath)
+        chk.close()
+        
+    return bath    
 
 t1 = time.time()
 
-nx = 4.0
+nx = 0.1
 
 dir = 'hydrodynamics_trench_slant_' + str(nx)
 
@@ -68,3 +83,12 @@ export_final_state("hydrodynamics_trench_slant_bath_new_"+str(nx), bath)
 print("total time: ")
 print(t2-t1)
 
+bath_real = initialise_fields(new_mesh, 'hydrodynamics_trench_slant_bath_4.0')
+
+print(nx)
+
+print('L2')
+print(fire.errornorm(bath, bath_real))
+
+print("total time: ")
+print(t2-t1)
