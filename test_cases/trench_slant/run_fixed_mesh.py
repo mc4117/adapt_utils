@@ -63,7 +63,7 @@ new_mesh = RectangleMesh(16*5*4, 5*4, 16, 1.1)
 
 bath = Function(FunctionSpace(new_mesh, "CG", 1)).project(swp.solver_obj.fields.bathymetry_2d)
 
-export_final_state("hydrodynamics_trench_slant_bath_"+str(nx), bath)
+export_final_state("hydrodynamics_trench_slant_bath_new_"+str(nx), bath)
 
 print("total time: ")
 print(t2-t1)

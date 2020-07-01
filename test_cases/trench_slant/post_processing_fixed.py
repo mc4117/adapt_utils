@@ -27,11 +27,11 @@ def initialise_fields(mesh2d, inputdir):
 
 new_mesh = th.RectangleMesh(16*5*4, 5*4, 16, 1.1)
 
-bath1 = initialise_fields(new_mesh, 'hydrodynamics_trench_slant_bath_0.1')
-bath2 = initialise_fields(new_mesh, 'hydrodynamics_trench_slant_bath_0.2')
-bath3 = initialise_fields(new_mesh, 'hydrodynamics_trench_slant_bath_0.4')
-bath4 = initialise_fields(new_mesh, 'hydrodynamics_trench_slant_bath_0.8')
-bath5 =  initialise_fields(new_mesh, 'hydrodynamics_trench_slant_bath_2.0')
+bath1 = initialise_fields(new_mesh, 'hydrodynamics_trench_slant_bath_new_0.1')
+bath2 = initialise_fields(new_mesh, 'hydrodynamics_trench_slant_bath_new_0.2')
+bath3 = initialise_fields(new_mesh, 'hydrodynamics_trench_slant_bath_new_0.4')
+bath4 = initialise_fields(new_mesh, 'hydrodynamics_trench_slant_bath_new_0.8')
+bath5 =  initialise_fields(new_mesh, 'hydrodynamics_trench_slant_bath_new_2.0')
 bath_real = initialise_fields(new_mesh, 'hydrodynamics_trench_slant_bath_4.0')
 
 errorlist = []

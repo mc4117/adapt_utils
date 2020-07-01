@@ -12,7 +12,7 @@ from adapt_utils.norms import local_frobenius_norm
 
 t1 = time.time()
 
-nx = 1.0
+nx = 0.1
 alpha = 0.0
 
 dir = 'hydrodynamics_trench_slant_' + str(nx)
