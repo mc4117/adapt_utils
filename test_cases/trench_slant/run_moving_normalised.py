@@ -1,24 +1,34 @@
 from thetis import *
 
+import firedrake as fire
 import pylab as plt
 import pandas as pd
 import numpy as np
 import time
+import datetime
+from firedrake.petsc import PETSc
 
 from adapt_utils.test_cases.trench_slant.options import TrenchSlantOptions
-from adapt_utils.swe.solver import UnsteadyShallowWaterProblem
+from adapt_utils.swe.morphological.solver import UnsteadyShallowWaterProblem
 from adapt_utils.adapt import recovery
 from adapt_utils.norms import local_frobenius_norm
 
 t1 = time.time()
 
 nx = 0.1
-alpha = 0.0
+alpha = 25
+
+ts = time.time()
+st = datetime.datetime.fromtimestamp(ts).strftime('%Y-%m-%d %H:%M:%S')
+outputdir = 'outputs' + st
 
 dir = 'hydrodynamics_trench_slant_' + str(nx)
 
+print(dir)
+
 op = TrenchSlantOptions(approach='monge_ampere',
                    input_dir = dir,
+                   output_dir = outputdir,
                    plot_timeseries=False,
                    plot_pvd=True,
                    debug=False,
@@ -26,7 +36,7 @@ op = TrenchSlantOptions(approach='monge_ampere',
                    num_adapt=1,
                    friction='nikuradse',
                    nx=nx,
-                   ny=1,
+                   ny=nx,
                    r_adapt_rtol=1.0e-3,
                    init = True)
 
@@ -90,11 +100,11 @@ def initialise_fields(mesh2d, inputdir):
     """
     Initialise simulation with results from a previous simulation
     """
-    V = th.FunctionSpace(mesh2d, 'CG', 1)
+    V = FunctionSpace(mesh2d, 'CG', 1)
     # elevation
-    with th.timed_stage('initialising bathymetry'):
-        chk = th.DumbCheckpoint(inputdir + "/bathymetry", mode=th.FILE_READ)
-        bath = th.Function(V, name="bathymetry")
+    with timed_stage('initialising bathymetry'):
+        chk = DumbCheckpoint(inputdir + "/bathymetry", mode=FILE_READ)
+        bath = Function(V, name="bathymetry")
         chk.load(bath)
         chk.close()
         
