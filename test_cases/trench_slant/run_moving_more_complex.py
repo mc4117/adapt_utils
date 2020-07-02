@@ -11,12 +11,12 @@ from firedrake.petsc import PETSc
 from adapt_utils.test_cases.trench_slant.options import TrenchSlantOptions
 from adapt_utils.swe.morphological.solver import UnsteadyShallowWaterProblem
 from adapt_utils.adapt import recovery
-from adapt_utils.norms import local_frobenius_norm
+from adapt_utils.norms import local_frobenius_norm, local_norm
 
 t1 = time.time()
 
-nx = 0.4
-alpha = 5
+nx = 0.1
+alpha = 900
 
 ts = time.time()
 st = datetime.datetime.fromtimestamp(ts).strftime('%Y-%m-%d %H:%M:%S')
@@ -60,7 +60,6 @@ def gradient_interface_monitor(mesh, alpha=alpha, gamma=0.0):
     frob_bath_hess = Function(b.function_space()).project(local_frobenius_norm(bath_hess))
     frob_bath_norm = Function(b.function_space()).project(frob_bath_hess/max(frob_bath_hess.dat.data[:]))
     current_mesh = b.function_space().mesh()
-    import ipdb; ipdb.set_trace()
     l2_bath_grad = Function(b.function_space()).project(local_norm(bath_gradient))
     bath_dx_l2_norm = Function(b.function_space()).interpolate(l2_bath_grad/max(l2_bath_grad.dat.data[:]))
     
