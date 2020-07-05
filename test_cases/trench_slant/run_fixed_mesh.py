@@ -43,13 +43,10 @@ def initialise_fields(mesh2d, inputdir):
 
 t1 = time.time()
 
-<<<<<<< HEAD
-nx = 0.2
-=======
-nx = 0.1
->>>>>>> ab2ed1a78dccdcb0dde184659355a3691d7563e8
+nx = 1.6
+ny = 1.6
 
-dir = 'hydrodynamics_trench_slant_' + str(nx)
+dir = 'hydrodynamics_trench_slant_'  + str(nx)
 
 ts = time.time()
 st = datetime.datetime.fromtimestamp(ts).strftime('%Y-%m-%d %H:%M:%S')
@@ -65,7 +62,7 @@ op = TrenchSlantOptions(approach='fixed_mesh',
                    num_adapt=1,
                    friction='nikuradse',
                    nx=nx,
-                   ny=nx,
+                   ny=ny,
                    r_adapt_rtol=1.0e-3,
                    init = True)
 
@@ -87,7 +84,7 @@ export_final_state("hydrodynamics_trench_slant_bath_new_"+str(nx), bath)
 print("total time: ")
 print(t2-t1)
 
-bath_real = initialise_fields(new_mesh, 'hydrodynamics_trench_slant_bath_4.0')
+bath_real = initialise_fields(new_mesh, 'hydrodynamics_trench_slant_bath_new_4.0')
 
 print(nx)
 

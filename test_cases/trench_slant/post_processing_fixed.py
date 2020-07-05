@@ -32,7 +32,7 @@ bath2 = initialise_fields(new_mesh, 'hydrodynamics_trench_slant_bath_new_0.2')
 bath3 = initialise_fields(new_mesh, 'hydrodynamics_trench_slant_bath_new_0.4')
 bath4 = initialise_fields(new_mesh, 'hydrodynamics_trench_slant_bath_new_0.8')
 bath5 =  initialise_fields(new_mesh, 'hydrodynamics_trench_slant_bath_new_2.0')
-bath_real = initialise_fields(new_mesh, 'hydrodynamics_trench_slant_bath_4.0')
+bath_real = initialise_fields(new_mesh, 'hydrodynamics_trench_slant_bath_new_4.0')
 
 errorlist = []
 errorlist.append(fire.errornorm(bath5, bath_real))
