@@ -15,13 +15,8 @@ from adapt_utils.norms import local_frobenius_norm
 
 t1 = time.time()
 
-<<<<<<< HEAD
 nx = 0.4
-alpha = 15
-=======
-nx = 0.8
-alpha = 5
->>>>>>> ab2ed1a78dccdcb0dde184659355a3691d7563e8
+alpha = 0
 
 ts = time.time()
 st = datetime.datetime.fromtimestamp(ts).strftime('%Y-%m-%d %H:%M:%S')
@@ -134,7 +129,7 @@ def export_final_state(inputdir, bathymetry_2d):
 
 export_final_state("adapt_output/hydrodynamics_trench_slant_bath_"+str(alpha) + "_" + str(nx), bath)
 
-bath_real = initialise_fields(new_mesh, 'hydrodynamics_trench_slant_bath_4.0')
+bath_real = initialise_fields(new_mesh, 'hydrodynamics_trench_slant_bath_new_4.0')
 
 print(nx)
 print(alpha)

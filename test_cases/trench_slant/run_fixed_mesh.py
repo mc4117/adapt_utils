@@ -43,11 +43,8 @@ def initialise_fields(mesh2d, inputdir):
 
 t1 = time.time()
 
-<<<<<<< HEAD
-nx = 0.2
-=======
-nx = 0.1
->>>>>>> ab2ed1a78dccdcb0dde184659355a3691d7563e8
+nx = 0.4
+
 
 dir = 'hydrodynamics_trench_slant_' + str(nx)
 
@@ -87,7 +84,7 @@ export_final_state("hydrodynamics_trench_slant_bath_new_"+str(nx), bath)
 print("total time: ")
 print(t2-t1)
 
-bath_real = initialise_fields(new_mesh, 'hydrodynamics_trench_slant_bath_4.0')
+bath_real = initialise_fields(new_mesh, 'hydrodynamics_trench_slant_bath_new_4.0')
 
 print(nx)
 
