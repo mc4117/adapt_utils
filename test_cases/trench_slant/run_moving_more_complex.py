@@ -1,3 +1,4 @@
+
 from thetis import *
 
 import firedrake as fire
@@ -15,15 +16,17 @@ from adapt_utils.norms import local_frobenius_norm, local_norm
 
 t1 = time.time()
 
-nx = 0.1
-alpha = 900
+nx = 1.6
+alpha = 300
+beta = 1
+gamma = 0.5
 
 ts = time.time()
 st = datetime.datetime.fromtimestamp(ts).strftime('%Y-%m-%d %H:%M:%S')
 outputdir = 'outputs' + st
 
 dir = 'hydrodynamics_trench_slant_' + str(nx)
-
+#dir = 'hydrodynamics_trench_slant_0.250.4'
 print(dir)
 
 op = TrenchSlantOptions(approach='monge_ampere',
@@ -44,7 +47,7 @@ swp = UnsteadyShallowWaterProblem(op, levels=0)
 swp.setup_solver()
 
 
-def gradient_interface_monitor(mesh, alpha=alpha, gamma=0.0):
+def gradient_interface_monitor(mesh, alpha=alpha, beta = beta, gamma=gamma):
 
     """
     Monitor function focused around the steep_gradient (budd acta numerica)
@@ -63,7 +66,7 @@ def gradient_interface_monitor(mesh, alpha=alpha, gamma=0.0):
     l2_bath_grad = Function(b.function_space()).project(local_norm(bath_gradient))
     bath_dx_l2_norm = Function(b.function_space()).interpolate(l2_bath_grad/max(l2_bath_grad.dat.data[:]))
     
-    comp = interpolate(conditional(bath_dx_l2_norm > frob_bath_norm, bath_dx_l2_norm, frob_bath_norm), b.function_space())  
+    comp = interpolate(conditional(beta*bath_dx_l2_norm > gamma*frob_bath_norm, beta*bath_dx_l2_norm, gamma*frob_bath_norm), b.function_space())  
     comp_new = project(comp, P1)
     comp_new2 = interpolate(conditional(comp_new > Constant(0.0), comp_new, Constant(0.0)), P1)
     mon_init = project(sqrt(Constant(1.0) + alpha * comp_new2), P1)
@@ -116,9 +119,9 @@ def export_final_state(inputdir, bathymetry_2d):
     viewer = PETSc.Viewer().createHDF5(inputdir + '/myplex.h5', 'w')
     viewer(plex)        
 
-export_final_state("adapt_output/hydrodynamics_trench_slant_bath_c"+str(alpha) + "_" + str(nx), bath)
+export_final_state("adapt_output/hydrodynamics_trench_slant_bath_c"+str(alpha) + "_" + str(beta) + '_' + str(gamma) + '-' + str(nx), bath)
 
-bath_real = initialise_fields(new_mesh, 'hydrodynamics_trench_slant_bath_4.0')
+bath_real = initialise_fields(new_mesh, 'hydrodynamics_trench_slant_bath_new_4.0')
 
 print(nx)
 print(alpha)
@@ -127,3 +130,6 @@ print(fire.errornorm(bath, bath_real))
 
 print("total time: ")
 print(t2-t1)
+
+print(beta)
+print(gamma)

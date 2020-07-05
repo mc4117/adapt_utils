@@ -15,7 +15,8 @@ from adapt_utils.norms import local_frobenius_norm
 
 t1 = time.time()
 
-nx = 0.4
+nx = 2.0
+
 alpha = 0
 
 ts = time.time()
