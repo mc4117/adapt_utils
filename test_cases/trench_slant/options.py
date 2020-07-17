@@ -61,7 +61,7 @@ class TrenchSlantOptions(MorphOptions):
 
         self.grad_depth_viscosity = True
 
-        self.num_hours = 15
+        self.num_hours = 1
 
         self.t_old = Constant(0.0)
         # Stabilisation
@@ -76,7 +76,7 @@ class TrenchSlantOptions(MorphOptions):
             self.set_up_morph_model(self.input_dir, mesh)
 
         # Time integration
-        self.dt = 0.2
+        self.dt = 0.15
         self.end_time = float(self.num_hours*3600.0/self.morfac)
         self.dt_per_export = 40
         self.dt_per_remesh = 40

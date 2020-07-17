@@ -17,7 +17,7 @@ from adapt_utils.norms import local_frobenius_norm, local_norm
 t1 = time.time()
 
 nx = 1.6
-alpha = 300
+alpha = 0
 beta = 1
 gamma = 0.5
 
@@ -55,6 +55,7 @@ def gradient_interface_monitor(mesh, alpha=alpha, beta = beta, gamma=gamma):
     NOTE: Defined on the *computational* mesh.
 
     """
+    import ipdb; ipdb.set_trace()
     P1 = FunctionSpace(mesh, "CG", 1)
 
     b = swp.solver_obj.fields.bathymetry_2d
