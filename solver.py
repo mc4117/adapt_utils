@@ -805,12 +805,12 @@ class SteadyProblem():
 
             # Create a temporary Problem based on the new mesh
             am_copy = self.am.copy()
-            
+
             if hasattr(self.op, 'input_dir'):
                 op_copy = type(self.op)(mesh=am_copy.mesh, input_dir = self.op.input_dir)
             else:
                 op_copy = type(self.op)(mesh=am_copy.mesh)
-            
+
             export_bool = op_copy.export_intermediate
 
             op_copy.update(self.op)
@@ -836,7 +836,6 @@ class SteadyProblem():
             # Update self.mesh and function spaces, etc.
 
             self.mesh.coordinates.dat.data[:] = x.dat.data  # FIXME: Not parallel
-
             self.create_function_spaces()
             self.create_solutions()
             self.boundary_conditions = self.op.set_boundary_conditions(self.V)
@@ -1088,7 +1087,7 @@ class UnsteadyProblem(SteadyProblem):
             if hasattr(self.op, 'tracer_init') and self.op.tracer_init is not None:
                 self.solution_old_tracer = Function(self.P1DG).project(self.op.tracer_init)
             else:
-                self.solution_old_tracer = Function(self.P1DG).project(Constant(0.0))
+                self.solution_old_tracer = None #Function(self.P1DG).project(Constant(0.0))
             self.solution_old_bathymetry = Function(self.P1).project(self.op.set_bathymetry(self.P1))
         if adjoint:
             self.adjoint_solution_old.assign(self.adjoint_solution)

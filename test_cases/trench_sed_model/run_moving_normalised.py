@@ -14,7 +14,7 @@ from adapt_utils.norms import local_frobenius_norm
 t1 = time.time()
 
 nx = 0.1
-alpha = 0
+alpha = 5
 
 ts = time.time()
 st = datetime.datetime.fromtimestamp(ts).strftime('%Y-%m-%d %H:%M:%S')
@@ -56,17 +56,6 @@ def gradient_interface_monitor(mesh, alpha=alpha, gamma=0.0):
     bath_hess = recovery.construct_hessian(b, op=op)
     frob_bath_hess = Function(b.function_space()).project(local_frobenius_norm(bath_hess))
     frob_bath_norm = Function(b.function_space()).project(frob_bath_hess/max(frob_bath_hess.dat.data[:]))
-    # current_mesh = eta.function_space().mesh()
-    # P1_current = FunctionSpace(current_mesh, "CG", 1)
-    # bath_dx_sq = interpolate(pow(bath_gradient[0], 2), P1_current)
-    # bath_dy_sq = interpolate(pow(bath_gradient[1], 2), P1_current)
-    # bath_dx_dx_sq = interpolate(pow(bath_dx_sq.dx(0), 2), P1_current)
-    # bath_dy_dy_sq = interpolate(pow(bath_dy_sq.dx(1), 2), P1_current)
-    # norm = interpolate(conditional(bath_dx_dx_sq + bath_dy_dy_sq > 10**(-7), bath_dx_dx_sq + bath_dy_dy_sq, Constant(10**(-7))), P1_current)
-    # norm_two = interpolate(bath_dx_dx_sq + bath_dy_dy_sq, P1_current)
-    # norm_one = interpolate(bath_dx_sq + bath_dy_sq, P1_current)
-    # norm_tmp = interpolate(bath_dx_sq/norm, P1_current)
-    # norm_one_proj = project(norm_one, P1)
     norm_two_proj = project(frob_bath_norm, P1)
 
     H = Function(P1)
@@ -74,7 +63,7 @@ def gradient_interface_monitor(mesh, alpha=alpha, gamma=0.0):
     n = FacetNormal(mesh)
 
     mon_init = project(sqrt(Constant(1.0) + alpha * norm_two_proj), P1)
-
+    import ipdb; ipdb.set_trace()
     #K = 10*(0.2**2)/4
     #a = (inner(tau, H)*dx)+(K*inner(grad(tau), grad(H))*dx) - (K*(tau*inner(grad(H), n)))*ds
     #a -= inner(tau, mon_init)*dx
@@ -104,7 +93,7 @@ for i in np.linspace(0, 15.9, 160):
 
 df = pd.concat([pd.DataFrame(datathetis, columns=['x']), pd.DataFrame(bathymetrythetis1, columns=['bath'])], axis=1)
 
-df.to_csv('adapt_output/bed_trench_output_uni_' + str(nx) + '_' + str(alpha) + '.csv')
+#df.to_csv('adapt_output/bed_trench_output_uni_' + str(nx) + '_' + str(alpha) + '.csv')
 
 datathetis = []
 bathymetrythetis1 = []
@@ -117,7 +106,7 @@ for i in range(len(data[0].dropna())):
 
 df_exp = pd.concat([pd.DataFrame(datathetis, columns=['x']), pd.DataFrame(bathymetrythetis1, columns=['bath'])], axis=1)
 
-df_exp.to_csv('adapt_output/bed_trench_output_' + str(nx) + '_' + str(alpha) + '.csv')
+#df_exp.to_csv('adapt_output/bed_trench_output_' + str(nx) + '_' + str(alpha) + '.csv')
 
 print(nx)
 print(alpha)

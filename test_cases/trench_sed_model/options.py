@@ -25,9 +25,9 @@ class TrenchOptions(MorphOptions):
     """
 
     def __init__(self, friction='manning', plot_timeseries=False, nx=1, ny=1, mesh = None, input_dir = None, output_dir = None, **kwargs):
-        
+
         super(TrenchOptions, self).__init__(**kwargs)
-        
+
         try:
             assert friction in ('nikuradse', 'manning')
         except AssertionError:
@@ -77,10 +77,10 @@ class TrenchOptions(MorphOptions):
             self.set_up_morph_model(self.input_dir, mesh)
 
         # Time integration
-        self.dt = 0.3
+        self.dt = 0.25
         self.end_time = float(self.num_hours*3600.0/self.morfac)
-        self.dt_per_export = 40
-        self.dt_per_remesh = 40
+        self.dt_per_export = 48
+        self.dt_per_remesh = 48
         self.timestepper = 'CrankNicolson'
         self.implicitness_theta = 1.0
 
@@ -138,7 +138,7 @@ class TrenchOptions(MorphOptions):
 
 
         if self.suspended:
-            self.tracer_init = None
+            self.tracer_init = Constant(0.0)
 
     def set_bathymetry(self, fs, **kwargs):
 
@@ -172,7 +172,7 @@ class TrenchOptions(MorphOptions):
     def set_boundary_conditions_tracer(self, sed_model):
         boundary_conditions = {}
         inflow_tag = 1
-        boundary_conditions[inflow_tag] = {'value': sed_model.sediment_rate}        
+        boundary_conditions[inflow_tag] = {'value': sed_model.equiltracer}
         return boundary_conditions
 
     def set_initial_condition(self, fs):

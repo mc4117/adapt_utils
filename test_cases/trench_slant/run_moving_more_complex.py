@@ -16,10 +16,10 @@ from adapt_utils.norms import local_frobenius_norm, local_norm
 
 t1 = time.time()
 
-nx = 1.6
-alpha = 300
-beta = 1
-gamma = 0.5
+nx = 0.2
+alpha = 350
+beta = 0.5
+gamma = 1
 
 ts = time.time()
 st = datetime.datetime.fromtimestamp(ts).strftime('%Y-%m-%d %H:%M:%S')
