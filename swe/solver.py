@@ -517,7 +517,6 @@ class UnsteadyShallowWaterProblem(UnsteadyProblem):
             raise NotImplementedError  # TODO
         if not hasattr(self, 'solver_obj'):
             self.setup_solver_forward()
-
         if self.op.solve_tracer:
             if self.solution_old_tracer is not None:
                 self.tracer_interp = project(self.solution_old_tracer, self.P1DG)
@@ -551,7 +550,6 @@ class UnsteadyShallowWaterProblem(UnsteadyProblem):
         else:
             solution_bathymetry = self.solver_obj.fields.bathymetry_2d.copy(deepcopy=True)
             self.solution_old_bathymetry = project(solution_bathymetry, P1_old)
-
         if self.op.solve_tracer:
             solution_tracer = self.solver_obj.fields.tracer_2d.copy(deepcopy=True)
             self.solution_old_tracer = project(solution_tracer, P1DG_old)

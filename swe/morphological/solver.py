@@ -155,7 +155,6 @@ class UnsteadyShallowWaterProblem(UnsteadyProblem):
         u_interp, eta_interp = self.solution.split()
 
         options = self.solver_obj.options
-
         self.solver_obj.sediment_model = SedimentModel(options, suspendedload=self.op.suspended, convectivevel=self.op.convective_vel_flag,
                             bedload=self.op.bedload, angle_correction=self.op.angle_correction, slope_eff=self.op.slope_eff, seccurrent=False,
                             mesh2d=self.mesh, bathymetry_2d=self.solver_obj.fields.bathymetry_2d,
@@ -251,7 +250,6 @@ class UnsteadyShallowWaterProblem(UnsteadyProblem):
             self.solver_obj.assign_initial_conditions(uv=u_interp, elev=eta_interp, sediment=self.tracer_interp)
         else:
             self.solver_obj.assign_initial_conditions(uv=u_interp, elev=eta_interp)
-
         if hasattr(self, 'extra_setup'):
             self.extra_setup()
         # Ensure correct iteration count
