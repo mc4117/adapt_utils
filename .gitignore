@@ -19,4 +19,3 @@ log
 tracer/*
 case_studies/*
 *.patch
-*.png
